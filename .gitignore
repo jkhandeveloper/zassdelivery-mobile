@@ -41,3 +41,8 @@ example
 # generated native folders
 /ios
 /android
+
+# Environment: holds the Maps key and any API host overrides.
+.env
+.env.local
+.env.*.local
