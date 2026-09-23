@@ -29,6 +29,20 @@ const IDENTIFIERS: Record<Variant, { id: string; name: string }> = {
 
 const { id: bundleId, name: appName } = IDENTIFIERS[VARIANT];
 
+/**
+ * Dev and preview builds talk to an API on the LAN over plain http://, which
+ * release builds on both platforms refuse by default — every request fails
+ * as a generic network error. Production must only ever use HTTPS, so it
+ * keeps the platform default.
+ */
+const ALLOW_CLEARTEXT = VARIANT !== "production";
+
+/**
+ * Not a secret — it identifies the project, not the account. Written by
+ * `eas init`; paste it here or into `.env` and the `eas env` environments.
+ */
+const EAS_PROJECT_ID = process.env.EAS_PROJECT_ID || undefined;
+
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
   name: appName,
@@ -51,6 +65,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       CFBundleAllowMixedLocalizations: true,
       // A rider's run has to keep reporting while the screen is off.
       UIBackgroundModes: ["location", "remote-notification"],
+      ...(ALLOW_CLEARTEXT && {
+        NSAppTransportSecurity: { NSAllowsArbitraryLoads: true, NSAllowsLocalNetworking: true },
+      }),
     },
   },
 
@@ -83,6 +100,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   },
 
   plugins: [
+    "./plugins/with-android-build-fixes",
     "expo-router",
     "expo-secure-store",
     [
@@ -133,6 +151,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
           compileSdkVersion: 36,
           targetSdkVersion: 36,
           minSdkVersion: 24,
+          usesCleartextTraffic: ALLOW_CLEARTEXT,
         },
         // 16.4 is the floor SDK 57 enforces; anything lower is rejected at
         // config time. It drops iOS 15, which is no longer a meaningful share.
@@ -147,8 +166,10 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   },
 
   updates: {
-    // Set once `eas update:configure` has run.
-    url: process.env.EXPO_UPDATE_URL,
+    // EAS Update's endpoint is always u.expo.dev/<projectId>.
+    url:
+      process.env.EXPO_UPDATE_URL ||
+      (EAS_PROJECT_ID ? `https://u.expo.dev/${EAS_PROJECT_ID}` : undefined),
   },
   // Every build with the same runtime version can accept the same OTA update.
   // "appVersion" means a native change forces a new binary rather than
@@ -157,6 +178,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
 
   extra: {
     variant: VARIANT,
-    eas: { projectId: process.env.EAS_PROJECT_ID },
+    eas: { projectId: EAS_PROJECT_ID },
   },
 });

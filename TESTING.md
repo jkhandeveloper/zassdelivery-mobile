@@ -202,6 +202,43 @@ The app asks for each one at the moment it is needed, not on launch, so test the
 On Android 11+, "always allow" location cannot be granted from the in-app prompt — it opens
 Settings. That is an OS rule, not a bug, and the rider screen says so.
 
+### C6. A standalone APK for testers
+
+The development build needs Metro running on your PC. To hand someone an app that works on its
+own, build the **preview** variant — it installs as "ZassDeliver (Preview)" alongside the dev
+build.
+
+A standalone build has no dev server to infer the API host from, so the API origin is
+**compiled in**. Change it and you rebuild.
+
+**Locally, in WSL:**
+
+```bash
+npm run apk                                  # API on this machine's LAN IP, port 3002
+npm run apk -- https://api.zassdeliver.com   # or any other origin
+adb install -r dist/zassdeliver-preview.apk
+```
+
+The script refuses a WSL NAT address (§A1), checks the API answers, and warns if the Maps key
+is missing. The first build downloads Gradle and every Maven dependency (~30+ minutes on a slow
+link); after that a rebuild takes about 8 minutes. The APK is ~140 MB because it carries all four
+CPU architectures, so the same file runs on phones and on the x86_64 emulator. The APK is signed with the debug keystore — fine for sideloading, not for the Play
+Store.
+
+**On EAS:** `.env` is gitignored, so the cloud build never sees it. Put the values in the
+`preview` environment once:
+
+```bash
+eas env:create --environment preview --name EXPO_PUBLIC_API_URL     --value https://api.zassdeliver.com/api/v1 --visibility plaintext
+eas env:create --environment preview --name EXPO_PUBLIC_SOCKET_URL  --value https://api.zassdeliver.com        --visibility plaintext
+eas env:create --environment preview --name GOOGLE_MAPS_ANDROID_KEY --value <key>                              --visibility secret
+eas env:create --environment preview --name EAS_PROJECT_ID          --value <id>                               --visibility plaintext
+eas build --profile preview --platform android
+```
+
+Dev and preview builds allow plain `http://` (a LAN API); production builds do not, on either
+platform — that is `ALLOW_CLEARTEXT` in `app.config.ts`.
+
 ---
 
 ## D. iOS

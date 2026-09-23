@@ -72,7 +72,8 @@
     "lint": "expo lint",
     "typecheck": "tsc --noEmit",
     "drift": "./scripts/check-api-drift.sh",
-    "doctor": "expo-doctor"
+    "doctor": "expo-doctor",
+    "apk": "./scripts/build-apk.sh"
   },
   "private": true
 }
