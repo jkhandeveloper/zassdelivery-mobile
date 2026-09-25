@@ -43,6 +43,9 @@ const ALLOW_CLEARTEXT = VARIANT !== "production";
  */
 const EAS_PROJECT_ID = process.env.EAS_PROJECT_ID || undefined;
 
+/** Where the bundled typefaces come from; see the expo-font plugin below. */
+const FONTS = "./node_modules/@expo-google-fonts";
+
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
   name: appName,
@@ -66,7 +69,10 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       // A rider's run has to keep reporting while the screen is off.
       UIBackgroundModes: ["location", "remote-notification"],
       ...(ALLOW_CLEARTEXT && {
-        NSAppTransportSecurity: { NSAllowsArbitraryLoads: true, NSAllowsLocalNetworking: true },
+        NSAppTransportSecurity: {
+          NSAllowsArbitraryLoads: true,
+          NSAllowsLocalNetworking: true,
+        },
       }),
     },
   },
@@ -92,8 +98,10 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     ],
     config: {
       googleMaps: {
-        // Android has no system map; react-native-maps needs a Google key or
-        // the map renders as a blank grey grid with no error.
+        // Android has no system map; react-native-maps needs a Google key.
+        // Without one, mounting a MapView throws and takes the app down, so
+        // DeliveryMap checks `extra.googleMapsAndroid` and draws a map-less
+        // route card instead.
         apiKey: process.env.GOOGLE_MAPS_ANDROID_KEY ?? "",
       },
     },
@@ -103,6 +111,63 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     "./plugins/with-android-build-fixes",
     "expo-router",
     "expo-secure-store",
+    [
+      // Embedded at build time rather than loaded with useFonts(), so the first
+      // frame already has them — no splash delay and no system-font flash.
+      // Android gets real weighted families (XML fonts), so `font-semibold` on
+      // `font-sans` selects Inter SemiBold instead of a synthesised bold.
+      "expo-font",
+      {
+        android: {
+          fonts: [
+            {
+              fontFamily: "Inter",
+              fontDefinitions: [
+                {
+                  path: `${FONTS}/inter/400Regular/Inter_400Regular.ttf`,
+                  weight: 400,
+                },
+                {
+                  path: `${FONTS}/inter/500Medium/Inter_500Medium.ttf`,
+                  weight: 500,
+                },
+                {
+                  path: `${FONTS}/inter/600SemiBold/Inter_600SemiBold.ttf`,
+                  weight: 600,
+                },
+                {
+                  path: `${FONTS}/inter/700Bold/Inter_700Bold.ttf`,
+                  weight: 700,
+                },
+              ],
+            },
+            {
+              fontFamily: "PlusJakartaSans",
+              fontDefinitions: [
+                {
+                  path: `${FONTS}/plus-jakarta-sans/700Bold/PlusJakartaSans_700Bold.ttf`,
+                  weight: 700,
+                },
+                {
+                  path: `${FONTS}/plus-jakarta-sans/800ExtraBold/PlusJakartaSans_800ExtraBold.ttf`,
+                  weight: 800,
+                },
+              ],
+            },
+          ],
+        },
+        ios: {
+          fonts: [
+            `${FONTS}/inter/400Regular/Inter_400Regular.ttf`,
+            `${FONTS}/inter/500Medium/Inter_500Medium.ttf`,
+            `${FONTS}/inter/600SemiBold/Inter_600SemiBold.ttf`,
+            `${FONTS}/inter/700Bold/Inter_700Bold.ttf`,
+            `${FONTS}/plus-jakarta-sans/700Bold/PlusJakartaSans_700Bold.ttf`,
+            `${FONTS}/plus-jakarta-sans/800ExtraBold/PlusJakartaSans_800ExtraBold.ttf`,
+          ],
+        },
+      },
+    ],
     [
       "expo-splash-screen",
       {
@@ -178,6 +243,10 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
 
   extra: {
     variant: VARIANT,
+    // Read by DeliveryMap. Mounting a Google MapView on Android without a key
+    // is not a blank map but a native RuntimeException that kills the app, so
+    // the JS has to know at runtime whether one was compiled in.
+    googleMapsAndroid: Boolean(process.env.GOOGLE_MAPS_ANDROID_KEY),
     eas: { projectId: EAS_PROJECT_ID },
   },
 });

@@ -184,14 +184,40 @@ function ActiveRun({ run }: { run: AssignmentDto }) {
       <Divider />
 
       {/*
-        One step at a time, chosen by the order's status.
+        One step at a time, chosen by the order's status — the same sequence
+        as the web app's delivery panel, because the API enforces it:
 
-        READY_FOR_PICKUP / CONFIRMED / PREPARING → the rider is still heading to
-        the kitchen or waiting on it, so the only move is "I've got it".
-        PICKED_UP → they have the food; mark the leg to the customer.
-        ON_THE_WAY → they are at the door; issue a code, then confirm with it.
+        READY_FOR_PICKUP → "I've collected it". POST …/pickup moves the order
+          to PICKED_UP *and* texts the customer their four-digit code.
+        PICKED_UP → mark the leg to the customer.
+        ON_THE_WAY → at the door; take the code and confirm with it.
+        CONFIRMED / PREPARING → nothing to do but wait for the kitchen.
       */}
-      {status === OrderStatus.PICKED_UP ? (
+      {status === OrderStatus.READY_FOR_PICKUP ? (
+        <View className="gap-2">
+          <Body muted className="text-[13px]">
+            At the restaurant? Confirming pickup sends the customer a four-digit code you&apos;ll
+            need at the door.
+          </Body>
+          <Button
+            fullWidth
+            loading={issueCode.isPending}
+            onPress={() =>
+              issueCode.mutate(order.id, {
+                onSuccess: (result) =>
+                  toast.success("Order collected", {
+                    description: result.codeSent
+                      ? "The customer has their delivery code."
+                      : "Ask the customer for their code at the door.",
+                  }),
+                onError,
+              })
+            }
+          >
+            I&apos;ve collected the order
+          </Button>
+        </View>
+      ) : status === OrderStatus.PICKED_UP ? (
         <Button
           fullWidth
           loading={markOnTheWay.isPending}
@@ -206,62 +232,40 @@ function ActiveRun({ run }: { run: AssignmentDto }) {
         </Button>
       ) : status === OrderStatus.ON_THE_WAY ? (
         <View className="gap-2">
-          {run.awaitingDeliveryCode ? (
-            <>
-              <Body muted className="text-[13px]">
-                Ask the customer for the four digits we sent them.
-              </Body>
-              <Input
-                value={code}
-                onChangeText={(text) => setCode(text.replace(/\D/g, "").slice(0, 4))}
-                placeholder="1234"
-                keyboardType="number-pad"
-                maxLength={4}
-                autoComplete="one-time-code"
-                textContentType="oneTimeCode"
-                accessibilityLabel="Delivery code"
-              />
-              <Button
-                fullWidth
-                disabled={code.length !== 4}
-                loading={confirmDelivery.isPending}
-                onPress={() =>
-                  confirmDelivery.mutate(
-                    { orderId: order.id, data: { code } },
-                    {
-                      onSuccess: (result) => {
-                        setCode("");
-                        toast.success("Delivered", {
-                          description: `You earned ${formatPrice(result.earned)}`,
-                        });
-                      },
-                      onError,
-                    },
-                  )
-                }
-              >
-                Confirm delivery
-              </Button>
-            </>
-          ) : (
-            <Button
-              fullWidth
-              loading={issueCode.isPending}
-              onPress={() =>
-                issueCode.mutate(order.id, {
-                  onSuccess: (result) =>
-                    toast.success(
-                      result.codeSent
-                        ? "Code sent to the customer"
-                        : "Ask the customer for their code",
-                    ),
+          <Body muted className="text-[13px]">
+            At the door? Ask the customer for the four digits we sent them.
+          </Body>
+          <Input
+            value={code}
+            onChangeText={(text) => setCode(text.replace(/\D/g, "").slice(0, 4))}
+            placeholder="0000"
+            keyboardType="number-pad"
+            maxLength={4}
+            autoComplete="one-time-code"
+            textContentType="oneTimeCode"
+            accessibilityLabel="Delivery code"
+          />
+          <Button
+            fullWidth
+            disabled={code.length !== 4}
+            loading={confirmDelivery.isPending}
+            onPress={() =>
+              confirmDelivery.mutate(
+                { orderId: order.id, data: { code } },
+                {
+                  onSuccess: (result) => {
+                    setCode("");
+                    toast.success("Delivered", {
+                      description: `You earned ${formatPrice(result.earned)}`,
+                    });
+                  },
                   onError,
-                })
-              }
-            >
-              I&apos;m at the door
-            </Button>
-          )}
+                },
+              )
+            }
+          >
+            Confirm delivery
+          </Button>
         </View>
       ) : (
         <Body muted className="text-[13px]">

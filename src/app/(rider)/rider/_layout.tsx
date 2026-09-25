@@ -2,8 +2,9 @@ import { Tabs } from "expo-router";
 import { Bike, LifeBuoy, Package, Wallet } from "lucide-react-native";
 import * as React from "react";
 
-import { useTheme } from "@/components/providers";
 import { RoleGuard } from "@/components/shared/role-guard";
+import { TabDock } from "@/components/ui/tab-dock";
+import { useSceneStyle } from "@/lib/palette";
 import { UserRole } from "@/types/auth";
 
 /**
@@ -19,23 +20,12 @@ import { UserRole } from "@/types/auth";
  * and each one has its own next step.
  */
 export default function RiderLayout() {
-  const { resolved } = useTheme();
-
-  const colors =
-    resolved === "dark"
-      ? { active: "#22D3EE", inactive: "#6B8599", background: "#111F2D", border: "#1C3145" }
-      : { active: "#0E7490", inactive: "#75909F", background: "#FFFFFF", border: "#E3EDF4" };
-
+  const sceneStyle = useSceneStyle();
   return (
     <RoleGuard allow={[UserRole.RIDER]}>
       <Tabs
-        screenOptions={{
-          headerShown: false,
-          tabBarActiveTintColor: colors.active,
-          tabBarInactiveTintColor: colors.inactive,
-          tabBarStyle: { backgroundColor: colors.background, borderTopColor: colors.border },
-          tabBarLabelStyle: { fontSize: 11, fontWeight: "600" },
-        }}
+        tabBar={(props) => <TabDock {...props} />}
+        screenOptions={{ headerShown: false, sceneStyle }}
       >
         <Tabs.Screen
           name="index"

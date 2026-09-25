@@ -8,6 +8,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { AppProviders, loadStoredTheme, useAuth, useTheme } from "@/components/providers";
+import { useSceneStyle } from "@/lib/palette";
 
 // Held until the session has been read back from the keychain. See SplashGate.
 void SplashScreen.preventAutoHideAsync();
@@ -48,6 +49,22 @@ function SplashGate({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+/** Inside the providers, so the scene background follows the resolved theme. */
+function RootStack() {
+  const sceneStyle = useSceneStyle();
+
+  return (
+    // Headers are off globally: each portal's layout draws its own, so a
+    // default header would stack a second bar above every screen.
+    <Stack screenOptions={{ headerShown: false, contentStyle: sceneStyle }}>
+      <Stack.Screen name="(auth)" />
+      <Stack.Screen name="(customer)" />
+      <Stack.Screen name="(rider)" />
+      <Stack.Screen name="(vendor)" />
+    </Stack>
+  );
+}
+
 /** Inside the providers, so the bar follows the resolved theme. */
 function ThemedStatusBar() {
   const { resolved } = useTheme();
@@ -62,16 +79,7 @@ export default function RootLayout() {
         <AppProviders>
           <ThemedStatusBar />
           <SplashGate>
-            {/*
-              Headers are off globally: each portal's layout draws its own, so a
-              default header would stack a second bar above every screen.
-            */}
-            <Stack screenOptions={{ headerShown: false }}>
-              <Stack.Screen name="(auth)" />
-              <Stack.Screen name="(customer)" />
-              <Stack.Screen name="(rider)" />
-              <Stack.Screen name="(vendor)" />
-            </Stack>
+            <RootStack />
           </SplashGate>
         </AppProviders>
       </SafeAreaProvider>

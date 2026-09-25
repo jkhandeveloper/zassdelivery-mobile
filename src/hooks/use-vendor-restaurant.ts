@@ -68,7 +68,10 @@ export function useVendorRestaurant(): VendorRestaurantState {
       error: profile.error ?? assigned.error,
       // A staff account with no restaurant is an administrative mistake, not
       // something the member of staff can fix by filling in a form.
-      needsRegistration: false,
+      // MOBILE: still reported, so VendorGate shows its "No restaurant
+      // attached" explanation (it branches on role) instead of falling through
+      // to a generic "Something went wrong" for a null restaurant.
+      needsRegistration: profile.isSuccess && staffRestaurantId === null,
       refetch: () => {
         void profile.refetch();
         void assigned.refetch();

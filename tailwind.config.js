@@ -14,6 +14,8 @@
  *
  * @type {import('tailwindcss').Config}
  */
+const { platformSelect } = require("nativewind/theme");
+
 module.exports = {
   content: ["./src/**/*.{js,jsx,ts,tsx}"],
   presets: [require("nativewind/preset")],
@@ -33,6 +35,10 @@ module.exports = {
         border: {
           subtle: "var(--border-subtle)",
           DEFAULT: "var(--border-default)",
+          // `DEFAULT` generates `border-border`, but the screens (like the web
+          // app) write `border-border-default`. Without this alias that class
+          // matched nothing and Android drew every such border black.
+          default: "var(--border-default)",
           strong: "var(--border-strong)",
         },
 
@@ -83,15 +89,24 @@ module.exports = {
       },
 
       borderRadius: {
-        input: "14px",
-        card: "20px",
-        panel: "24px",
+        input: "16px",
+        card: "22px",
+        panel: "28px",
+        hero: "32px",
       },
 
       fontFamily: {
-        // Resolved to the bundled families in `src/constants/fonts.ts`.
-        display: ["PlusJakarta_700Bold"],
-        sans: ["Inter_400Regular"],
+        // Embedded by the expo-font plugin in app.config.ts. Android registers
+        // them as weighted XML families under the names below. iOS takes the
+        // family from the font file ("Plus Jakarta Sans"), but a platformSelect
+        // value containing spaces compiles to an *empty* rule in NativeWind, so
+        // iOS gets the ExtraBold face by its PostScript name instead — display
+        // type is always extra-bold anyway.
+        display: platformSelect({
+          ios: "PlusJakartaSans-ExtraBold",
+          default: "PlusJakartaSans",
+        }),
+        sans: platformSelect({ ios: "Inter", default: "Inter" }),
       },
     },
   },

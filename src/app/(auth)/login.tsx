@@ -10,10 +10,11 @@ import { useAuth } from "@/components/providers";
 import { Button } from "@/components/ui/button";
 import { ControlledInput } from "@/components/ui/controlled-input";
 import { InputAction } from "@/components/ui/input";
-import { Body, Heading, Screen } from "@/components/ui/primitives";
+import { AuthShell } from "@/components/shared/auth-shell";
+import { Body } from "@/components/ui/primitives";
 import { toast } from "@/components/ui/toast";
 import { ApiError } from "@/lib/api-client";
-import { mobileHomeRouteForRole, safeNextPath } from "@/lib/routes";
+import { postLoginRoute, safeNextPath } from "@/lib/routes";
 
 /**
  * Ported from the web app's `login-form.tsx`. Same schema, same error copy.
@@ -70,7 +71,7 @@ export default function LoginScreen() {
 
       // `replace`, not `push`: the login screen must not sit in the back stack,
       // or the hardware back button returns a signed-in user to it.
-      router.replace(nextPath ?? mobileHomeRouteForRole(user));
+      router.replace(postLoginRoute(user, nextPath));
     } catch (error) {
       const message =
         error instanceof ApiError
@@ -86,12 +87,11 @@ export default function LoginScreen() {
   });
 
   return (
-    <Screen scroll contentContainerClassName="justify-center gap-6">
-      <View className="gap-2">
-        <Heading>Welcome back</Heading>
-        <Body muted>Sign in to track orders, save addresses and reorder in a tap.</Body>
-      </View>
-
+    <AuthShell
+      eyebrow="Welcome back"
+      title={"Good food is\na tap away."}
+      subtitle="Sign in to track orders, save addresses and reorder in a tap."
+    >
       {sessionExpired ? (
         <View
           accessibilityRole="alert"
@@ -174,6 +174,6 @@ export default function LoginScreen() {
           </Pressable>
         </Link>
       </View>
-    </Screen>
+    </AuthShell>
   );
 }

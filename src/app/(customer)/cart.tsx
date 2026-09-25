@@ -368,7 +368,7 @@ function CartScreen() {
         </Card>
 
         <Card className="gap-2">
-          <TotalRow label={`Subtotal (${filled.totals.totalQuantity} items)`} value={formatPrice(filled.totals.subtotal)} />
+          <TotalRow label={`Subtotal (${filled.totals.totalQuantity} ${filled.totals.totalQuantity === 1 ? "item" : "items"})`} value={formatPrice(filled.totals.subtotal)} />
 
           {filled.totals.discountAmount > 0 ? (
             <TotalRow label="Discount" value={`−${formatPrice(filled.totals.discountAmount)}`} />

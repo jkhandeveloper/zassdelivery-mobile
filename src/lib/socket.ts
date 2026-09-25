@@ -101,6 +101,7 @@ export function connectSocket(token: string): void {
   });
 
   socket.on(ServerEvents.ready, (payload: ReadyPayload) => {
+    serverDisconnects = 0;
     publish({
       state: "connected",
       autoJoinedRooms: payload.rooms,
@@ -122,11 +123,67 @@ export function connectSocket(token: string): void {
   // `connect` fires before the server's ready handshake; treat it as still
   // connecting so the UI does not claim to be live a beat early.
   socket.on("connect", () => publish({ state: "connecting" }));
-  socket.on("disconnect", () => publish({ state: "reconnecting" }));
+  socket.on("disconnect", (reason) => {
+    publish({ state: "reconnecting" });
+
+    // MOBILE: see recoverFromServerDisconnect.
+    if (reason === "io server disconnect") {
+      void recoverFromServerDisconnect(socket);
+    }
+  });
   socket.on("connect_error", () => publish({ state: "offline" }));
 
   publish({ socket, state: "connecting" });
   socket.connect();
+}
+
+/**
+ * MOBILE: getting back in after the server closed the connection.
+ *
+ * Socket.IO deliberately never auto-reconnects a disconnect the *server*
+ * initiated, and the gateway initiates one whenever a handshake's token is
+ * rejected. Access tokens live fifteen minutes, so any drop after that — a
+ * network blip, an API deploy — reconnects with an expired token, is refused,
+ * and the socket then stays dead until the app is backgrounded: an order
+ * screen that looks live and receives nothing.
+ *
+ * So: make one authenticated request, which refreshes the token through the
+ * API client's single-flight refresh (RealtimeProvider copies the new token
+ * onto `socket.auth`), then connect again. Backed off, so an account the server
+ * refuses for other reasons does not spin; a failed refresh is a sign-out, which
+ * disconnectSocket() handles.
+ */
+let reauthenticate: (() => Promise<string | null>) | null = null;
+let serverDisconnects = 0;
+
+/** `handler` resolves to a currently valid access token, refreshing if it must. */
+export function setSocketReauthenticator(handler: (() => Promise<string | null>) | null): void {
+  reauthenticate = handler;
+}
+
+async function recoverFromServerDisconnect(socket: ZassSocket): Promise<void> {
+  serverDisconnects += 1;
+  const delay = Math.min(30_000, 1_000 * 2 ** (serverDisconnects - 1));
+
+  await new Promise((resolve) => setTimeout(resolve, delay));
+
+  let token: string | null = null;
+
+  try {
+    token = (await reauthenticate?.()) ?? null;
+  } catch {
+    publish({ state: "offline" });
+    return;
+  }
+
+  // Signed out, or replaced by a new session, while we waited.
+  if (token !== null && snapshot.socket === socket && !socket.connected) {
+    // Set here rather than left to RealtimeProvider's effect, which runs after
+    // the next render — too late for the connect() on the line below.
+    socket.auth = { token };
+    publish({ state: "connecting" });
+    socket.connect();
+  }
 }
 
 export function disconnectSocket(): void {

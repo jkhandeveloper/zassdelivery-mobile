@@ -1,11 +1,14 @@
-import { Tabs } from "expo-router";
+import { Redirect, Tabs } from "expo-router";
 import { Home, Receipt, ShoppingCart, User, UtensilsCrossed } from "lucide-react-native";
 import * as React from "react";
 import { Text, View } from "react-native";
 
-import { useAuth, useTheme } from "@/components/providers";
+import { useAuth } from "@/components/providers";
+import { TabDock } from "@/components/ui/tab-dock";
+import { useSceneStyle } from "@/lib/palette";
 import { useCart } from "@/hooks/use-cart";
 import { isFilledCart } from "@/lib/cart";
+import { MOBILE_ROUTES, mobileHomeRouteForRole } from "@/lib/routes";
 
 /**
  * The customer storefront.
@@ -16,19 +19,6 @@ import { isFilledCart } from "@/lib/cart";
  * the cart's checkout step, orders, the profile — guard themselves with
  * `RequireAuth`.
  */
-
-/**
- * The tab colours have to be real values, not classes: React Navigation's tab
- * bar is configured through props, so NativeWind never sees it. They are read
- * from the resolved theme rather than hard-coded so the bar follows dark mode.
- */
-function useTabColors() {
-  const { resolved } = useTheme();
-
-  return resolved === "dark"
-    ? { active: "#22D3EE", inactive: "#6B8599", background: "#111F2D", border: "#1C3145" }
-    : { active: "#0E7490", inactive: "#75909F", background: "#FFFFFF", border: "#E3EDF4" };
-}
 
 /**
  * The item count on the cart tab.
@@ -58,29 +48,39 @@ function CartBadge() {
   }
 
   return (
-    <View className="absolute -right-2.5 -top-1 min-w-[18px] items-center justify-center rounded-full bg-accent-warm px-1">
-      <Text className="font-sans text-[10px] font-bold text-white">
-        {count > 9 ? "9+" : count}
-      </Text>
+    <View
+      collapsable={false}
+      className="absolute -right-2.5 -top-1.5 min-w-[18px] items-center justify-center rounded-full border-2 border-surface bg-accent-warm px-1"
+    >
+      <Text className="font-sans text-[10px] font-bold text-white">{count > 9 ? "9+" : count}</Text>
     </View>
   );
 }
 
 export default function CustomerLayout() {
-  const colors = useTabColors();
+  const sceneStyle = useSceneStyle();
+  const { user, isAuthenticated } = useAuth();
+
+  // `/` is the storefront, so it is where every cold start lands. A signed-in
+  // rider or vendor belongs in their own portal. Decided once, on mount — a
+  // sign-in that happens later navigates onward itself (postLoginRoute), and a
+  // second, competing redirect from here would race it.
+  const [portal] = React.useState(() => {
+    if (!isAuthenticated || user === null) return null;
+
+    const home = mobileHomeRouteForRole(user);
+
+    return home === MOBILE_ROUTES.customerHome ? null : home;
+  });
+
+  if (portal !== null) {
+    return <Redirect href={portal} />;
+  }
 
   return (
     <Tabs
-      screenOptions={{
-        headerShown: false,
-        tabBarActiveTintColor: colors.active,
-        tabBarInactiveTintColor: colors.inactive,
-        tabBarStyle: {
-          backgroundColor: colors.background,
-          borderTopColor: colors.border,
-        },
-        tabBarLabelStyle: { fontSize: 11, fontWeight: "600" },
-      }}
+      tabBar={(props) => <TabDock {...props} />}
+      screenOptions={{ headerShown: false, sceneStyle }}
     >
       <Tabs.Screen
         name="index"
@@ -101,7 +101,7 @@ export default function CustomerLayout() {
         options={{
           title: "Cart",
           tabBarIcon: ({ color, size }) => (
-            <View>
+            <View collapsable={false}>
               <ShoppingCart size={size} color={color} />
               <CartBadge />
             </View>

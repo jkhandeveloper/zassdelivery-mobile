@@ -8,10 +8,12 @@ import {
   joinRestaurantRoom,
   leaveOrderRoom,
   leaveRestaurantRoom,
+  setSocketReauthenticator,
   subscribeToRealtime,
   type ConnectionState,
   type RealtimeSnapshot,
 } from "@/lib/socket";
+import { authApi } from "@/lib/api/auth";
 import type { ServerToClientEvents } from "@/lib/socket-events";
 import { useAuthStore } from "@/store/auth-store";
 
@@ -40,7 +42,17 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
   }, [accessToken]);
 
   React.useEffect(() => {
+    // MOBILE: lets the socket recover from a handshake refused over an expired
+    // token (see recoverFromServerDisconnect). GET /auth/me goes through the
+    // API client, so a 401 there performs the one shared refresh.
+    setSocketReauthenticator(async () => {
+      await authApi.me();
+
+      return useAuthStore.getState().tokens?.accessToken ?? null;
+    });
+
     return () => {
+      setSocketReauthenticator(null);
       disconnectSocket();
     };
   }, []);

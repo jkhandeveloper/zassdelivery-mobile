@@ -188,7 +188,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       clearLocalSession();
-      router.replace("/login");
+
+      // MOBILE: a customer lands back on the storefront, which is public, so
+      // the tab navigator stays mounted and nothing is torn down mid-update.
+      // The portals are role-guarded and have to be left for the login screen.
+      const inPortal =
+        pathnameRef.current.startsWith("/rider") || pathnameRef.current.startsWith("/vendor");
+
+      router.replace(inPortal ? "/login" : "/");
     },
     [clearLocalSession, router],
   );

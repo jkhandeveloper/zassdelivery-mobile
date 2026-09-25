@@ -307,7 +307,7 @@ need no App Review; external testers do.
 | `adb devices` is empty | WSL not restarted after `.wslconfig` (§A1), or the phone is on a different Wi-Fi. |
 | Metro QR code will not connect | Phone and PC on different networks, or Windows Firewall is blocking port 8081. Try `npx expo start --tunnel`. |
 | Crash on launch, keychain error | You are using Expo Go. Build a development build (§A5). |
-| **Map is a blank grey grid** | Missing `GOOGLE_MAPS_ANDROID_KEY` in `.env`. Get a key from Google Cloud Console, enable **Maps SDK for Android**, then rebuild — it is compiled in, so Metro reload is not enough. |
+| **Order screen shows a route card, not a map** | Missing `GOOGLE_MAPS_ANDROID_KEY` in `.env`. The app deliberately skips the map: a Google `MapView` without a key crashes on Android. Get a key from Google Cloud Console, enable **Maps SDK for Android**, then rebuild — it is compiled in, so Metro reload is not enough. |
 | Rider marker never appears | The rider has not accepted a run, or denied location. Check the rider dashboard for the location warning. |
 | Rider marker frozen | Look for the amber "Not receiving live updates" banner on the tracking screen. That is the socket, not the rider. |
 | Changes do not appear | JS changes reload; native config (`app.config.ts`, plugins, new native deps) needs a rebuild. |

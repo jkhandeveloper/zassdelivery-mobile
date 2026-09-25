@@ -10,10 +10,11 @@ import { useAuth } from "@/components/providers";
 import { Button } from "@/components/ui/button";
 import { ControlledInput } from "@/components/ui/controlled-input";
 import { Field, InputAction } from "@/components/ui/input";
-import { Body, Heading, Screen } from "@/components/ui/primitives";
+import { AuthShell } from "@/components/shared/auth-shell";
+import { Body } from "@/components/ui/primitives";
 import { toast } from "@/components/ui/toast";
 import { ApiError } from "@/lib/api-client";
-import { mobileHomeRouteForRole, safeNextPath } from "@/lib/routes";
+import { postLoginRoute, safeNextPath } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 import { UserRole, type SelfServiceRole } from "@/types/auth";
 
@@ -113,7 +114,7 @@ export default function RegisterScreen() {
       });
 
       toast.success(`Welcome, ${user.fullName.split(" ")[0]}`);
-      router.replace(nextPath ?? mobileHomeRouteForRole(user));
+      router.replace(postLoginRoute(user, nextPath));
     } catch (error) {
       const message =
         error instanceof ApiError
@@ -129,12 +130,11 @@ export default function RegisterScreen() {
   });
 
   return (
-    <Screen scroll contentContainerClassName="justify-center gap-6 py-8">
-      <View className="gap-2">
-        <Heading>Create your account</Heading>
-        <Body muted>One account, whichever side of the order you are on.</Body>
-      </View>
-
+    <AuthShell
+      eyebrow="Join ZassDeliver"
+      title={"Order, ride\nor sell."}
+      subtitle="One account, whichever side of the order you are on."
+    >
       <View className="gap-4">
         {formError !== null ? (
           <View
@@ -282,6 +282,6 @@ export default function RegisterScreen() {
           </Pressable>
         </Link>
       </View>
-    </Screen>
+    </AuthShell>
   );
 }

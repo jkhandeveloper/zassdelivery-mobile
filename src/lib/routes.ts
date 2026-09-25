@@ -54,3 +54,27 @@ export function safeNextPath(next: string | string[] | undefined): string | null
 
   return value;
 }
+
+/**
+ * Where to go after signing in: the requested path if it belongs to this
+ * user's portal, otherwise their home.
+ *
+ * A `next` usually comes from a guarded customer screen ("/profile", "/cart").
+ * Honouring it for a rider or a vendor would drop them inside the customer
+ * storefront, which is not theirs.
+ */
+export function postLoginRoute(user: Pick<AuthUser, "role">, nextPath: string | null): string {
+  const home = mobileHomeRouteForRole(user);
+
+  if (nextPath === null) {
+    return home;
+  }
+
+  if (home === MOBILE_ROUTES.customerHome) {
+    const inPortal = ["/rider", "/vendor", "/admin"].some((prefix) => nextPath.startsWith(prefix));
+
+    return inPortal ? home : nextPath;
+  }
+
+  return nextPath.startsWith(home) ? nextPath : home;
+}

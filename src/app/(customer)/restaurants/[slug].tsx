@@ -6,10 +6,12 @@ import { Pressable, SectionList, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { MenuItemSheet } from "@/components/shared/menu-item-sheet";
+import { RestaurantTile } from "@/components/shared/restaurant-card";
 import { Badge, Body, Heading } from "@/components/ui/primitives";
 import { EmptyState, ErrorState, LoadingState } from "@/components/ui/states";
 import { useMenuItems, useRestaurantMenus } from "@/hooks/use-menus";
 import { useRestaurant } from "@/hooks/use-restaurants";
+import { usePalette } from "@/lib/palette";
 import { formatLandmark, formatPrice, hasText } from "@/lib/utils";
 import type { MenuItemDto } from "@/types/menu";
 
@@ -116,6 +118,7 @@ function MenuRow({
 export default function RestaurantScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const palette = usePalette();
   const { slug } = useLocalSearchParams<{ slug: string }>();
 
   const restaurantSlug = typeof slug === "string" ? slug : "";
@@ -124,7 +127,8 @@ export default function RestaurantScreen() {
   const restaurantId = restaurant.data?.id;
 
   const menus = useRestaurantMenus(restaurantId);
-  const items = useMenuItems(restaurantId, { limit: 200 });
+  // 100 is the API's PAGINATION_MAX_LIMIT; anything above it is a 400.
+  const items = useMenuItems(restaurantId, { limit: 100 });
 
   const [selected, setSelected] = React.useState<MenuItemDto | null>(null);
 
@@ -175,14 +179,17 @@ export default function RestaurantScreen() {
         }}
         ListHeaderComponent={
           <View>
-            <View className="relative">
-              <Image
-                source={hasText(data.coverUrl) ? { uri: data.coverUrl } : undefined}
-                style={{ width: "100%", height: 190, backgroundColor: "#E4EEF5" }}
-                contentFit="cover"
-                transition={200}
-                accessible={false}
-              />
+            <View collapsable={false} className="relative">
+              <RestaurantTile name={data.name} height={220} />
+              {hasText(data.coverUrl) ? (
+                <Image
+                  source={{ uri: data.coverUrl }}
+                  style={{ position: "absolute", width: "100%", height: 220 }}
+                  contentFit="cover"
+                  transition={200}
+                  accessible={false}
+                />
+              ) : null}
 
               <Pressable
                 accessibilityRole="button"
@@ -192,11 +199,14 @@ export default function RestaurantScreen() {
                 className="absolute left-3 h-10 w-10 items-center justify-center rounded-full bg-surface"
                 style={{ top: insets.top + 8 }}
               >
-                <ChevronLeft size={22} color="#0A1622" />
+                <ChevronLeft size={22} color={palette.textPrimary} />
               </Pressable>
             </View>
 
-            <View className="gap-2 px-4 py-4">
+            <View
+              collapsable={false}
+              className="-mt-6 gap-2 rounded-t-panel bg-canvas px-4 pb-4 pt-5"
+            >
               <View className="flex-row items-start justify-between gap-2">
                 <Heading level={1} className="flex-1">
                   {data.name}

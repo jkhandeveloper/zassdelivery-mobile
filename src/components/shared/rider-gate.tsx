@@ -2,6 +2,7 @@ import { useRouter } from "expo-router";
 import * as React from "react";
 import { Text } from "react-native";
 
+import { GateSignOut } from "@/components/shared/hero-sign-out";
 import { Button } from "@/components/ui/button";
 import { Body, Card, Heading, Screen } from "@/components/ui/primitives";
 import { ErrorState, LoadingState } from "@/components/ui/states";
@@ -69,6 +70,7 @@ export function RiderGate({
         <Button fullWidth onPress={() => router.push("/rider/apply")}>
           Start your application
         </Button>
+        <GateSignOut />
       </Screen>
     );
   }
@@ -103,6 +105,7 @@ export function RiderGate({
             as soon as a decision is made.
           </Body>
         )}
+        <GateSignOut />
       </Screen>
     );
   }
@@ -124,6 +127,7 @@ export function RiderGate({
         <Button fullWidth onPress={() => router.push("/rider/apply")}>
           Update and resubmit
         </Button>
+        <GateSignOut />
       </Screen>
     );
   }
@@ -140,6 +144,7 @@ export function RiderGate({
         <Button variant="outline" fullWidth onPress={() => router.push("/rider/support")}>
           Contact support
         </Button>
+        <GateSignOut />
       </Screen>
     );
   }

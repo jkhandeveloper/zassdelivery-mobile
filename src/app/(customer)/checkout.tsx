@@ -351,7 +351,8 @@ function CheckoutScreen() {
 
           <View className="flex-row justify-between">
             <Text className="font-sans text-[14px] text-secondary">
-              Subtotal ({filled.totals.totalQuantity} items)
+              Subtotal ({filled.totals.totalQuantity}{" "}
+              {filled.totals.totalQuantity === 1 ? "item" : "items"})
             </Text>
             <Text
               className="font-sans text-[14px] text-secondary"

@@ -209,7 +209,8 @@ function VendorMenu({ restaurant }: { restaurant: RestaurantAdminDto }) {
   }, [searchInput]);
 
   const items = useVendorMenuItems(restaurant.id, {
-    limit: 200,
+    // The API's PAGINATION_MAX_LIMIT; anything above it is a 400.
+    limit: 100,
     ...(search !== "" && { search }),
   });
 

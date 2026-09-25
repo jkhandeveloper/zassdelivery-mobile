@@ -53,7 +53,7 @@ else
 fi
 
 if [[ -z "$(grep -E '^GOOGLE_MAPS_ANDROID_KEY=.+' .env 2>/dev/null || true)" && -z "${GOOGLE_MAPS_ANDROID_KEY:-}" ]]; then
-  echo "⚠ GOOGLE_MAPS_ANDROID_KEY is not set — maps will render as a blank grey grid."
+  echo "⚠ GOOGLE_MAPS_ANDROID_KEY is not set — order tracking shows a route card instead of a map."
 fi
 
 # --clean: android/ is generated from app.config.ts, and a stale one would keep
@@ -65,6 +65,12 @@ cp package.json package.json.prebuild-bak
 trap 'mv -f package.json.prebuild-bak package.json 2>/dev/null || true' EXIT
 npx expo prebuild --platform android --clean --no-install
 mv -f package.json.prebuild-bak package.json
+
+# Metro caches NativeWind's compiled stylesheet keyed on src/global.css alone,
+# so a change to tailwind.config.js (fonts, colours, radii) is silently served
+# from the old cache and the APK ships the previous design. A release build is
+# rare enough that a cold bundle is worth it.
+rm -rf "$(node -p 'require("os").tmpdir()')/metro-cache"
 
 # The wrapper gives up after 10s of network silence, which a slow link hits
 # while fetching Gradle itself (~130 MB) on the first build.

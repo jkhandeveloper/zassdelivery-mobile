@@ -30,8 +30,8 @@ interface ButtonProps extends Omit<PressableProps, "children" | "style"> {
 const CONTAINER: Record<Variant, string> = {
   primary: "bg-brand",
   secondary: "bg-accent-warm",
-  outline: "border border-border-strong bg-transparent",
-  ghost: "bg-transparent",
+  outline: "border-[1.5px] border-border-strong bg-surface",
+  ghost: "bg-brand-soft",
   danger: "bg-danger",
 };
 
@@ -85,15 +85,18 @@ export function Button({
       accessibilityState={{ disabled: isInert, busy: loading }}
       disabled={isInert}
       className={cn(
-        "flex-row items-center justify-center gap-2 rounded-input",
+        "flex-row items-center justify-center gap-2 rounded-full",
         CONTAINER[variant],
         SIZING[size],
         fullWidth && "w-full",
         isInert && "opacity-50",
         className,
       )}
-      // Pressable's own feedback, since there is no :hover to lean on.
-      style={({ pressed }) => (pressed ? { opacity: isInert ? 0.5 : 0.85 } : undefined)}
+      // Pressable's own feedback, since there is no :hover to lean on: a small
+      // sink, which reads as a physical press where a fade reads as a flicker.
+      style={({ pressed }) =>
+        pressed && !isInert ? { opacity: 0.9, transform: [{ scale: 0.97 }] } : undefined
+      }
       {...rest}
     >
       {loading ? (
@@ -103,7 +106,7 @@ export function Button({
       )}
       <Text
         numberOfLines={1}
-        className={cn("font-sans font-semibold", LABEL[variant], LABEL_SIZE[size])}
+        className={cn("font-sans font-bold", LABEL[variant], LABEL_SIZE[size])}
       >
         {children}
       </Text>

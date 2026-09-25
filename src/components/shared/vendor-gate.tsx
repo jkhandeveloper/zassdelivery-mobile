@@ -3,6 +3,7 @@ import * as React from "react";
 import { Text } from "react-native";
 
 import { useAuth } from "@/components/providers";
+import { GateSignOut } from "@/components/shared/hero-sign-out";
 import { Button } from "@/components/ui/button";
 import { Body, Card, Heading, Screen } from "@/components/ui/primitives";
 import { ErrorState, LoadingState } from "@/components/ui/states";
@@ -57,6 +58,7 @@ export function VendorGate({
           <Button variant="outline" fullWidth onPress={() => router.push("/vendor/support")}>
             Contact support
           </Button>
+          <GateSignOut />
         </Screen>
       );
     }
@@ -71,6 +73,7 @@ export function VendorGate({
         <Button fullWidth onPress={() => router.push("/vendor/register")}>
           Register a restaurant
         </Button>
+        <GateSignOut />
       </Screen>
     );
   }
@@ -100,6 +103,7 @@ export function VendorGate({
         <Button variant="outline" fullWidth onPress={() => router.push("/vendor/menu")}>
           Set up your menu
         </Button>
+        <GateSignOut />
       </Screen>
     );
   }
@@ -121,6 +125,7 @@ export function VendorGate({
         <Button fullWidth onPress={() => router.push("/vendor/settings")}>
           Update your details
         </Button>
+        <GateSignOut />
       </Screen>
     );
   }
@@ -146,6 +151,7 @@ export function VendorGate({
         <Button variant="outline" fullWidth onPress={() => router.push("/vendor/support")}>
           Contact support
         </Button>
+        <GateSignOut />
       </Screen>
     );
   }

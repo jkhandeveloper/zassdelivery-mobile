@@ -1,3 +1,4 @@
+import Constants from "expo-constants";
 import { Bike, Crosshair, Home, Store } from "lucide-react-native";
 import * as React from "react";
 import { Platform, Pressable, Text, View } from "react-native";
@@ -10,6 +11,7 @@ import MapView, {
   type Region,
 } from "react-native-maps";
 
+import { usePalette } from "@/lib/palette";
 import type { Coordinates } from "@/lib/socket-events";
 
 /**
@@ -77,7 +79,145 @@ function MarkerPin({
   );
 }
 
-export function DeliveryMap({
+/**
+ * Whether a native map can be mounted at all.
+ *
+ * iOS always has Apple Maps. Android needs a Google Maps key compiled into the
+ * manifest, and without one `MapView` throws "API key not found" on mount —
+ * which React Native escalates to tearing down the whole app. A build without a
+ * key must still be able to open an order, so it gets `RouteProgress` instead.
+ */
+const NATIVE_MAP_AVAILABLE =
+  Platform.OS !== "android" ||
+  (Constants.expoConfig?.extra as { googleMapsAndroid?: boolean } | undefined)
+    ?.googleMapsAndroid === true;
+
+export function DeliveryMap(props: DeliveryMapProps) {
+  return NATIVE_MAP_AVAILABLE ? <NativeDeliveryMap {...props} /> : <RouteProgress {...props} />;
+}
+
+/** Great-circle distance in km. Plenty accurate at delivery scale. */
+function haversineKm(a: Coordinates, b: Coordinates): number {
+  const rad = Math.PI / 180;
+  const dLat = (b.latitude - a.latitude) * rad;
+  const dLng = (b.longitude - a.longitude) * rad;
+  const h =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(a.latitude * rad) * Math.cos(b.latitude * rad) * Math.sin(dLng / 2) ** 2;
+
+  return 12742 * Math.asin(Math.sqrt(h));
+}
+
+/**
+ * The journey without a map: restaurant, rider, door, on one track.
+ *
+ * The rider's dot sits at how far along the straight line from pickup to
+ * destination they have come, from the same live fixes the map would use —
+ * so it still moves as they do.
+ */
+function RouteProgress({
+  pickup,
+  destination,
+  rider,
+  restaurantName,
+  distanceKm,
+}: DeliveryMapProps) {
+  const palette = usePalette();
+
+  const remainingKm =
+    distanceKm ?? (rider !== null && destination !== null ? haversineKm(rider, destination) : null);
+
+  let progress: number | null = null;
+
+  if (rider !== null && pickup !== null && destination !== null) {
+    const total = haversineKm(pickup, destination);
+    const left = haversineKm(rider, destination);
+
+    progress = total > 0.01 ? Math.min(1, Math.max(0, 1 - left / total)) : 0.5;
+  }
+
+  const stops = [
+    { key: "pickup", Icon: Store, label: restaurantName, color: palette.saffron },
+    { key: "door", Icon: Home, label: "You", color: palette.success },
+  ] as const;
+
+  return (
+    <View
+      collapsable={false}
+      accessibilityLabel={
+        rider === null
+          ? "Waiting for a rider"
+          : `Rider on the way${remainingKm !== null ? `, ${remainingKm.toFixed(1)} km from you` : ""}`
+      }
+      className="gap-4 rounded-card border border-border-subtle bg-surface p-4"
+    >
+      <View className="flex-row items-center justify-between">
+        <Text className="font-display text-[16px] font-bold text-primary">
+          {rider === null ? "Waiting for a rider" : "Rider on the way"}
+        </Text>
+        {remainingKm !== null && rider !== null ? (
+          <View collapsable={false} className="rounded-full bg-brand-soft px-3 py-1">
+            <Text className="font-sans text-[12px] font-bold text-brand">
+              {remainingKm.toFixed(1)} km away
+            </Text>
+          </View>
+        ) : null}
+      </View>
+
+      <View collapsable={false} className="h-10 justify-center">
+        <View
+          collapsable={false}
+          className="h-1.5 rounded-full bg-surface-muted"
+          style={{ marginHorizontal: 18 }}
+        >
+          <View
+            collapsable={false}
+            className="h-1.5 rounded-full bg-brand"
+            style={{ width: `${Math.round((progress ?? 0) * 100)}%` }}
+          />
+        </View>
+
+        <View collapsable={false} className="absolute inset-x-0 flex-row justify-between">
+          {stops.map(({ key, Icon, color }) => (
+            <MarkerPin key={key} color={color}>
+              <Icon size={16} color="#FFFFFF" />
+            </MarkerPin>
+          ))}
+        </View>
+
+        {progress !== null ? (
+          <View
+            collapsable={false}
+            className="absolute"
+            // Keeps the 36pt pin inside the track at both ends.
+            style={{
+              left: `${Math.round(progress * 100)}%`,
+              marginLeft: -18 * (2 * progress - 1) - 18,
+            }}
+          >
+            <MarkerPin color={palette.brand}>
+              <Bike size={16} color="#FFFFFF" />
+            </MarkerPin>
+          </View>
+        ) : null}
+      </View>
+
+      <View className="flex-row justify-between">
+        {stops.map(({ key, label }) => (
+          <Text
+            key={key}
+            numberOfLines={1}
+            className="max-w-[45%] font-sans text-[12px] font-medium text-secondary"
+          >
+            {label}
+          </Text>
+        ))}
+      </View>
+    </View>
+  );
+}
+
+function NativeDeliveryMap({
   pickup,
   destination,
   rider,
