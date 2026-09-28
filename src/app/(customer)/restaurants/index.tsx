@@ -105,12 +105,12 @@ export default function RestaurantsScreen() {
   return (
     <View className="flex-1 bg-canvas" style={{ paddingTop: insets.top }}>
       <View className="gap-3 px-4 pb-3 pt-2">
-        <Heading level={2}>Restaurants</Heading>
+        <Heading level={2}>Businesses</Heading>
 
         <Input
           value={searchInput}
           onChangeText={setSearchInput}
-          placeholder="Search restaurants or dishes"
+          placeholder="Search businesses or dishes"
           autoCapitalize="none"
           autoCorrect={false}
           returnKeyType="search"
@@ -171,7 +171,7 @@ export default function RestaurantsScreen() {
       </View>
 
       {query.isPending ? (
-        <LoadingState label="Finding restaurants…" />
+        <LoadingState label="Finding businesses…" />
       ) : query.isError ? (
         <ErrorState error={query.error} onRetry={() => void query.refetch()} />
       ) : (
@@ -196,7 +196,7 @@ export default function RestaurantsScreen() {
               description={
                 hasFilters
                   ? "Try removing a filter, or search for something else."
-                  : "There are no restaurants listed in your area yet."
+                  : "There are no businesses listed in your area yet."
               }
               {...(hasFilters && {
                 action: { label: "Clear filters", onPress: clearFilters },

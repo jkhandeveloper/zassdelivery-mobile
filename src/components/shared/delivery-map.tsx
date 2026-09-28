@@ -372,7 +372,7 @@ function NativeDeliveryMap({
         style={{ height }}
       >
         <Text className="px-6 text-center font-sans text-[13px] text-muted">
-          The map appears once the restaurant confirms your order.
+          The map appears once the business confirms your order.
         </Text>
       </View>
     );

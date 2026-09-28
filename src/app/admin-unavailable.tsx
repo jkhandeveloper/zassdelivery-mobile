@@ -41,7 +41,7 @@ export default function AdminUnavailableScreen() {
       </Heading>
 
       <Body muted className="text-center">
-        The admin dashboard — dispatch, restaurants, riders, payments and billing — runs on the
+        The admin dashboard — dispatch, businesses, riders, payments and billing — runs on the
         web, where there is room for it. Sign in at the ZassDelivery dashboard on a computer.
       </Body>
 

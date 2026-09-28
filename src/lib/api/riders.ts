@@ -4,7 +4,6 @@ import type {
   RegisterRiderDto,
   UpdateRiderDto,
   RiderDocumentDto,
-  RiderWalletDto,
   UploadDocumentDto,
   SetAvailabilityDto,
   UpdateLocationDto,
@@ -17,10 +16,13 @@ import type {
   EarningDto,
   ListEarningsQueryDto,
   EarningsSummaryDto,
-  WalletTransactionDto,
-  RequestPayoutDto,
-  PayoutRequestDto,
-  ListPayoutsQueryDto,
+  ListSettlementQueryDto,
+  RecordCashReceivedDto,
+  RecordFeesReceivedDto,
+  RestaurantBalanceDto,
+  RiderBalanceDto,
+  RiderLedgerEntryDto,
+  RiderSettlementDto,
   ListRidersQueryDto,
   RejectRiderDto,
   SuspendRiderDto,
@@ -89,19 +91,34 @@ export const riderApi = {
   getEarningsSummary: () =>
     apiGet<EarningsSummaryDto>('/riders/me/earnings/summary'),
 
-  getWallet: () => apiGet<RiderWalletDto>('/riders/me/wallet'),
+  // Settlement with restaurants — the rider's side
+  getSettlementBalances: () => apiGet<RestaurantBalanceDto[]>('/riders/me/settlements'),
 
-  getWalletTransactions: (query?: { page?: number; limit?: number; sortBy?: string; sortOrder?: 'asc' | 'desc' }) =>
-    apiGetPaginated<WalletTransactionDto>('/riders/me/wallet/transactions', { params: query }),
+  getSettlementEntries: (query?: ListSettlementQueryDto) =>
+    apiGetPaginated<RiderLedgerEntryDto>('/riders/me/settlements/entries', { params: query }),
 
-  requestWithdrawal: (data: RequestPayoutDto) =>
-    apiPost<PayoutRequestDto>('/riders/me/withdrawals', data),
+  getSettlementPayments: (query?: ListSettlementQueryDto) =>
+    apiGetPaginated<RiderSettlementDto>('/riders/me/settlements/payments', { params: query }),
 
-  getWithdrawals: (query?: ListPayoutsQueryDto) =>
-    apiGetPaginated<PayoutRequestDto>('/riders/me/withdrawals', { params: query }),
+  recordFeesReceived: (data: RecordFeesReceivedDto) =>
+    apiPost<RiderSettlementDto>('/riders/me/settlements/fees-received', data),
 
-  cancelWithdrawal: (id: string) =>
-    apiPost<PayoutRequestDto>(`/riders/me/withdrawals/${id}/cancel`, {}),
+  // Settlement with riders — the restaurant's side
+  getRestaurantRiderBalances: (restaurantId: string) =>
+    apiGet<RiderBalanceDto[]>(`/restaurants/${restaurantId}/rider-settlements`),
+
+  getRestaurantRiderEntries: (restaurantId: string, query?: ListSettlementQueryDto) =>
+    apiGetPaginated<RiderLedgerEntryDto>(`/restaurants/${restaurantId}/rider-settlements/entries`, {
+      params: query,
+    }),
+
+  getRestaurantRiderPayments: (restaurantId: string, query?: ListSettlementQueryDto) =>
+    apiGetPaginated<RiderSettlementDto>(`/restaurants/${restaurantId}/rider-settlements/payments`, {
+      params: query,
+    }),
+
+  recordCashReceived: (restaurantId: string, data: RecordCashReceivedDto) =>
+    apiPost<RiderSettlementDto>(`/restaurants/${restaurantId}/rider-settlements/cash-received`, data),
 
   // Rider management
   listRiders: (query?: ListRidersQueryDto) =>
@@ -144,16 +161,4 @@ export const riderApi = {
 
   expireAssignments: () =>
     apiPost<{ expired: number }>('/rider-management/assignments/expire', {}),
-
-  listWithdrawals: (query?: ListPayoutsQueryDto) =>
-    apiGetPaginated<PayoutRequestDto>('/rider-management/withdrawals', { params: query }),
-
-  approveWithdrawal: (id: string) =>
-    apiPost<PayoutRequestDto>(`/rider-management/withdrawals/${id}/approve`, {}),
-
-  markWithdrawalPaid: (id: string, data: { paymentReference?: string }) =>
-    apiPost<PayoutRequestDto>(`/rider-management/withdrawals/${id}/paid`, data),
-
-  rejectWithdrawal: (id: string, data: { reason: string }) =>
-    apiPost<PayoutRequestDto>(`/rider-management/withdrawals/${id}/reject`, data),
 }

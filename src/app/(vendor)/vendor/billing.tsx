@@ -245,7 +245,7 @@ function BillingBody({
 
         {subscription.hasCustomRate ? (
           <Text className="font-sans text-[12px] text-muted">
-            This is a rate agreed for your restaurant.
+            This is a rate agreed for your business.
           </Text>
         ) : null}
 
@@ -487,7 +487,7 @@ function VendorBilling({ restaurant }: { restaurant: RestaurantAdminDto }) {
           <Card className="gap-2">
             <Heading level={3}>Owner only</Heading>
             <Body muted>
-              Billing is the restaurant owner&apos;s. Your account runs the menu and the order
+              Billing is the business owner&apos;s. Your account runs the menu and the order
               queue.
             </Body>
           </Card>

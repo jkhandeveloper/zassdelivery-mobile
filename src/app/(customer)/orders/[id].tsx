@@ -125,7 +125,7 @@ function TrackingScreen() {
   const onCancel = React.useCallback(() => {
     Alert.alert(
       "Cancel this order?",
-      "The restaurant will be told. This cannot be undone.",
+      "The business will be told. This cannot be undone.",
       [
         { text: "Keep it", style: "cancel" },
         {

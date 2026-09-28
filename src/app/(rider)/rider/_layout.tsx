@@ -1,5 +1,5 @@
 import { Tabs } from "expo-router";
-import { Bike, LifeBuoy, Package, Wallet } from "lucide-react-native";
+import { Bike, HandCoins, LifeBuoy, Package } from "lucide-react-native";
 import * as React from "react";
 
 import { RoleGuard } from "@/components/shared/role-guard";
@@ -42,10 +42,10 @@ export default function RiderLayout() {
           }}
         />
         <Tabs.Screen
-          name="wallet"
+          name="cash"
           options={{
-            title: "Wallet",
-            tabBarIcon: ({ color, size }) => <Wallet size={size} color={color} />,
+            title: "Cash",
+            tabBarIcon: ({ color, size }) => <HandCoins size={size} color={color} />,
           }}
         />
         <Tabs.Screen
@@ -60,11 +60,10 @@ export default function RiderLayout() {
           Offers are reached from the dashboard, not a tab: an offer is a
           time-boxed interruption with a countdown, so it belongs in front of
           the rider when it arrives rather than behind a tab they must remember
-          to check. Earnings and withdrawals hang off the wallet.
+          to check. Earnings hang off the cash screen.
         */}
         <Tabs.Screen name="offers" options={{ href: null }} />
         <Tabs.Screen name="earnings" options={{ href: null }} />
-        <Tabs.Screen name="withdrawals" options={{ href: null }} />
         {/* Reached from the gate when there is no approved rider yet. */}
         <Tabs.Screen name="apply" options={{ href: null }} />
       </Tabs>

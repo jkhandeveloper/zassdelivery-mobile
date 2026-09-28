@@ -138,7 +138,7 @@ Then confirm:
 Both reviewers need to log in and reach every role. On the **production**
 API, create:
 - a customer account
-- a vendor-owner account whose restaurant is active, with a menu
+- a vendor-owner account whose business is active, with a menu
 - a rider account that's approved and able to go online
 
 Write down the credentials. You'll enter them in both consoles.
@@ -245,10 +245,10 @@ Make sure that:
 - **Notes**: something like the text below.
 
 > ZassDeliver is a food delivery marketplace with three roles: customer,
-> restaurant (vendor) and rider. Demo accounts for each are provided.
-> Customers pay the restaurant directly (cash or bank/wallet transfer). No
+> food business (vendor) and rider. Demo accounts for each are provided.
+> Customers pay the business directly (cash or bank/wallet transfer). No
 > payment is processed in the app. Background location is used only by riders
-> during an active delivery, so customers can track their order. Restaurants
+> during an active delivery, so customers can track their order. Businesses
 > pay ZassDeliver a monthly business service fee by bank transfer outside the
 > app. This is a B2B charge for listing on the platform and unlocks no
 > consumer digital content.
@@ -268,7 +268,7 @@ the launch moment yourself.
 | 5.1.1 permission strings too vague | Say what the data is used for and who sees it |
 | 2.5.4 background location not justified | Section 2.7 + the review notes |
 | 3.1.1 external payment | Section 0.4 + the review notes |
-| 4.2 minimum functionality (empty app) | Make sure there are live restaurants in the reviewer's area, or explain in the notes that it serves Pakistan only |
+| 4.2 minimum functionality (empty app) | Make sure there are live businesses in the reviewer's area, or explain in the notes that it serves Pakistan only |
 
 ---
 

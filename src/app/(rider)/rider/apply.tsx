@@ -221,7 +221,7 @@ function ApplicationForm({ onFiled }: { onFiled: () => void }) {
       <View className="gap-1">
         <Heading level={3}>Where we pay you</Heading>
         <Body muted className="text-[13px]">
-          Optional now — you can add it before your first withdrawal.
+          Optional. Businesses can pay your delivery fees here.
         </Body>
       </View>
 

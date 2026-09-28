@@ -38,7 +38,7 @@ const CATEGORY_LABELS: Record<string, string> = {
   [TicketCategory.PAYMENT_ISSUE]: "Payment or refund",
   [TicketCategory.DELIVERY_ISSUE]: "Delivery problem",
   [TicketCategory.ACCOUNT]: "My account",
-  [TicketCategory.RESTAURANT_COMPLAINT]: "Complaint about a restaurant",
+  [TicketCategory.RESTAURANT_COMPLAINT]: "Complaint about a business",
   [TicketCategory.OTHER]: "Something else",
 };
 

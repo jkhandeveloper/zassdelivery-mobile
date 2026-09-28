@@ -185,7 +185,7 @@ function VendorStaff({ restaurant }: { restaurant: RestaurantAdminDto }) {
         {!isOwner ? (
           <Card className="gap-2">
             <Heading level={3}>Owner only</Heading>
-            <Body muted>Only the restaurant owner can create kitchen accounts.</Body>
+            <Body muted>Only the business owner can create kitchen accounts.</Body>
           </Card>
         ) : (
           <>
@@ -200,7 +200,7 @@ function VendorStaff({ restaurant }: { restaurant: RestaurantAdminDto }) {
                 <ErrorState error={staff.error} onRetry={() => void staff.refetch()} />
               ) : staff.data.length === 0 ? (
                 <Body muted className="text-[13px]">
-                  No kitchen accounts yet. You are running the restaurant on your own account.
+                  No kitchen accounts yet. You are running the business on your own account.
                 </Body>
               ) : (
                 staff.data.map((member, index) => (

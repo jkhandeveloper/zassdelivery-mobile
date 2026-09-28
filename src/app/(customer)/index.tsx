@@ -188,7 +188,7 @@ function Hero() {
       */}
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel="Search restaurants and dishes"
+        accessibilityLabel="Search businesses and dishes"
         onPress={() => router.push("/restaurants")}
         className="mt-5 flex-row items-center gap-3 rounded-full bg-surface py-2 pl-4 pr-2"
         style={({ pressed }) => ({
@@ -235,7 +235,7 @@ function OffersBanner() {
       <View className="flex-1 gap-0.5">
         <Text className="font-display text-[18px] font-extrabold text-white">Deals near you</Text>
         <Text className="font-sans text-[13px]" style={{ color: "#FFE3D3" }}>
-          Coupons and offers from restaurants you love
+          Coupons and offers from businesses you love
         </Text>
       </View>
       <ChevronRight size={22} color="#FFFFFF" />

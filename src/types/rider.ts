@@ -18,8 +18,7 @@ import type {
   OrderStatus,
   PaymentMethod,
   PaymentStatus,
-  PayoutMethod,
-  PayoutStatus,
+  RiderSettlementDirection,
   VehicleType,
 } from './enums'
 import type { PaymentQrCodeDto } from './payment'
@@ -159,6 +158,14 @@ export interface AssignmentOrderDto {
   paymentStatus: PaymentStatus
   /** Cash to collect at the door. Zero for prepaid orders. */
   cashToCollect: number
+  /** Delivery fee plus tip: what the rider keeps for this run. */
+  riderFee: number
+  /**
+   * What the rider owes the restaurant from the cash they collect
+   * (cashToCollect − riderFee). Zero for prepaid orders, where the restaurant
+   * owes the rider their fee instead.
+   */
+  cashForRestaurant: number
   restaurantName: string
   restaurantAddress: string
   restaurantPhone: string | null
@@ -183,7 +190,7 @@ export interface AssignmentDto {
   isLive: boolean
   order: AssignmentOrderDto
   pickupDistanceKm: number | null
-  /** Quoted before the tip, which may still change. */
+  /** The order's delivery fee, quoted before the tip, which may still change. */
   estimatedEarning: number
   /** False when a dispatcher assigned it by hand. */
   isAuto: boolean
@@ -225,8 +232,15 @@ export interface ConfirmDeliveryDto {
 
 export interface DeliveryCompletedDto {
   message: string
+  /** Delivery fee plus tip. */
   earned: number
   breakdown: EarningDto[]
+  /** Money the rider took from the customer. */
+  collected: number
+  /** What the rider now owes the restaurant for this order. */
+  owedToRestaurant: number
+  /** What the restaurant now owes the rider for this order. */
+  owedByRestaurant: number
 }
 
 export interface EarningDto {
@@ -259,56 +273,95 @@ export interface EarningsSummaryDto {
   averagePerDelivery: number
 }
 
-export interface RiderWalletDto {
+// ── Rider ↔ restaurant settlement ──────────────────────────────
+//
+// The platform never holds order money. A rider who collected cash owes the
+// restaurant everything but their fee (delivery fee + tip); a restaurant that
+// was paid directly owes the rider that fee. Only the party who received money
+// can record it.
+
+export interface SettlementTotalsDto {
+  deliveries: number
+  /** Order money the rider took from customers. */
+  cashCollected: number
+  /** Delivery fees and tips the rider kept. */
+  riderFees: number
+  /** Cash the restaurant has confirmed receiving. */
+  cashHandedOver: number
+  /** Fees the rider has confirmed receiving. */
+  feesPaid: number
+  /** What the rider owes the restaurant. Negative: the restaurant owes the rider. */
   balance: number
-  currency: string
-  /** Frozen during a fraud investigation. */
-  isLocked: boolean
-  pendingWithdrawals: number
-  availableToWithdraw: number
+  lastActivityAt: string | null
 }
 
-export interface WalletTransactionDto {
-  id: string
-  type: string
-  reason: string
-  amount: number
-  balanceAfter: number
-  description: string | null
-  createdAt: string
+/** The rider's view: one row per restaurant. */
+export interface RestaurantBalanceDto extends SettlementTotalsDto {
+  restaurantId: string
+  restaurantName: string
+  restaurantPhone: string | null
+  restaurantAddress: string
 }
 
-export interface RequestPayoutDto {
-  amount: number
-  method: PayoutMethod
-}
-
-export interface PayoutRequestDto {
-  id: string
-  reference: string
+/** The restaurant's view: one row per rider. */
+export interface RiderBalanceDto extends SettlementTotalsDto {
   driverId: string
-  amount: number
-  method: PayoutMethod
-  status: PayoutStatus
-  bankName: string | null
-  accountTitle: string
-  /** Masked to the last four digits. */
-  accountNumber: string
-  rejectionReason: string | null
-  paymentReference: string | null
-  processedAt: string | null
+  riderName: string
+  riderPhone: string
+  /** Where the restaurant can send the rider the fees it owes. */
+  paymentQrCodes: PaymentQrCodeDto[]
+}
+
+export interface RiderLedgerEntryDto {
+  id: string
+  orderId: string
+  orderNumber: string
+  paymentMethod: PaymentMethod
+  driverId: string
+  riderName: string
+  restaurantId: string
+  restaurantName: string
+  /** Zero when the restaurant was paid directly. */
+  collectedAmount: number
+  riderFee: number
+  /** Positive: the rider owes the restaurant. Negative: the reverse. */
+  netAmount: number
   createdAt: string
 }
 
-export interface ListPayoutsQueryDto {
+export interface RiderSettlementDto {
+  id: string
+  direction: RiderSettlementDirection
+  amount: number
+  note: string | null
+  driverId: string
+  riderName: string
+  restaurantId: string
+  restaurantName: string
+  /** Who confirmed receiving the money. */
+  recordedByName: string | null
+  createdAt: string
+}
+
+export interface ListSettlementQueryDto {
   page?: number
   limit?: number
-  sortBy?: 'createdAt' | 'amount' | 'processedAt'
-  sortOrder?: 'asc' | 'desc'
-  status?: PayoutStatus
+  /** Rider view: narrow to one restaurant. */
+  restaurantId?: string
+  /** Restaurant view: narrow to one rider. */
   driverId?: string
-  from?: string
-  to?: string
+}
+
+export interface RecordFeesReceivedDto {
+  restaurantId: string
+  amount: number
+  note?: string
+}
+
+export interface RecordCashReceivedDto {
+  driverId: string
+  amount: number
+  note?: string
 }
 
 export interface ListRidersQueryDto {

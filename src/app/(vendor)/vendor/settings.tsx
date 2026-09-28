@@ -57,7 +57,7 @@ const DAYS: readonly { key: string; label: string }[] = [
 ];
 
 const profileSchema = z.object({
-  name: z.string().trim().min(2, "Enter the restaurant name").max(120, "That name is too long"),
+  name: z.string().trim().min(2, "Enter the business name").max(120, "That name is too long"),
   description: z.string().trim().optional(),
   phone: z
     .string()
@@ -130,7 +130,7 @@ function ProfileSection({ restaurant }: { restaurant: RestaurantAdminDto }) {
 
   return (
     <Card className="gap-4">
-      <Heading level={3}>Your restaurant</Heading>
+      <Heading level={3}>Your business</Heading>
 
       {/*
         No logo or cover uploader here, deliberately. `PATCH

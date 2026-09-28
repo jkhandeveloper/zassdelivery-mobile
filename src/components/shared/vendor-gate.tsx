@@ -43,16 +43,16 @@ export function VendorGate({
   const isOwner = user?.role === UserRole.VENDOR_OWNER;
 
   if (vendor.isPending) {
-    return <LoadingState label="Loading your restaurant…" />;
+    return <LoadingState label="Loading your business…" />;
   }
 
   if (vendor.needsRegistration) {
     if (!isOwner) {
       return (
         <Screen scroll contentContainerClassName="justify-center gap-4">
-          <Heading level={2}>No restaurant attached</Heading>
+          <Heading level={2}>No business attached</Heading>
           <Body muted>
-            Your account is a kitchen account, but it is not linked to a restaurant yet. The
+            Your account is a kitchen account, but it is not linked to a business yet. The
             owner needs to add you from their Staff screen.
           </Body>
           <Button variant="outline" fullWidth onPress={() => router.push("/vendor/support")}>
@@ -65,13 +65,13 @@ export function VendorGate({
 
     return (
       <Screen scroll contentContainerClassName="justify-center gap-4">
-        <Heading level={2}>Register your restaurant</Heading>
+        <Heading level={2}>Register your business</Heading>
         <Body muted>
           You have a vendor account but no listing yet. Tell us about your kitchen and an
           administrator will review it before it goes live.
         </Body>
         <Button fullWidth onPress={() => router.push("/vendor/register")}>
-          Register a restaurant
+          Register a business
         </Button>
         <GateSignOut />
       </Screen>
@@ -85,7 +85,7 @@ export function VendorGate({
   const restaurant = vendor.restaurant;
 
   if (restaurant === null) {
-    return <ErrorState error={new Error("No restaurant was returned.")} onRetry={vendor.refetch} />;
+    return <ErrorState error={new Error("No business was returned.")} onRetry={vendor.refetch} />;
   }
 
   if (restaurant.status === RestaurantStatus.PENDING_APPROVAL) {

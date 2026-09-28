@@ -53,7 +53,7 @@ const ROLE_OPTIONS: readonly {
   {
     value: UserRole.CUSTOMER,
     label: "Order food",
-    description: "Browse restaurants and get delivery",
+    description: "Browse businesses and get delivery",
     Icon: ShoppingBag,
   },
   {
@@ -64,7 +64,7 @@ const ROLE_OPTIONS: readonly {
   },
   {
     value: UserRole.VENDOR_OWNER,
-    label: "List a restaurant",
+    label: "List a business",
     description: "Take orders from your kitchen",
     Icon: Store,
   },
@@ -267,7 +267,7 @@ export default function RegisterScreen() {
           application itself is filed from the portal's gate afterwards.
         */}
         <Body muted className="text-[13px]">
-          Riders and restaurant owners file an application after signing up. An administrator
+          Riders and business owners file an application after signing up. An administrator
           reviews it before you can take orders.
         </Body>
       </View>

@@ -45,7 +45,6 @@ export interface DashboardQueuesDto {
   /** Cooking or cooked with nobody to carry them — the cold-delivery number. */
   ordersAwaitingRider: number
   openTickets: number
-  pendingWithdrawals: number
   /** Gateway callbacks stored but not applied. */
   unresolvedWebhooks: number
 }

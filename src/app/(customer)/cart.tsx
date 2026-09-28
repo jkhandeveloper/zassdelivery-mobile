@@ -290,7 +290,7 @@ function CartScreen() {
       <EmptyState
         title="Your cart is empty"
         description="Find something to eat and it will show up here."
-        action={{ label: "Browse restaurants", onPress: () => router.push("/restaurants") }}
+        action={{ label: "Browse businesses", onPress: () => router.push("/restaurants") }}
       />
     );
   }
@@ -411,7 +411,7 @@ function CartScreen() {
 
         {filled.restaurant.minOrderAmount > filled.totals.subtotal ? (
           <Body muted className="text-[13px]">
-            This restaurant has a minimum of {formatPrice(filled.restaurant.minOrderAmount)}. Add{" "}
+            This business has a minimum of {formatPrice(filled.restaurant.minOrderAmount)}. Add{" "}
             {formatPrice(filled.restaurant.minOrderAmount - filled.totals.subtotal)} more to order.
           </Body>
         ) : null}

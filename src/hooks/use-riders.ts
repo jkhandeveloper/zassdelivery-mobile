@@ -8,10 +8,11 @@ import type {
   ConfirmDeliveryDto,
   ListAssignmentsQueryDto,
   ListEarningsQueryDto,
-  ListPayoutsQueryDto,
+  ListSettlementQueryDto,
+  RecordCashReceivedDto,
+  RecordFeesReceivedDto,
   RegisterRiderDto,
   RejectOfferDto,
-  RequestPayoutDto,
   SetAvailabilityDto,
   UpdateRiderDto,
   UploadDocumentDto,
@@ -27,10 +28,17 @@ export const riderKeys = {
   delivery: (orderId: string) => [...riderKeys.all, "delivery", orderId] as const,
   earnings: (query: ListEarningsQueryDto) => [...riderKeys.all, "earnings", query] as const,
   earningsSummary: () => [...riderKeys.all, "earnings", "summary"] as const,
-  wallet: () => [...riderKeys.all, "wallet"] as const,
-  walletTransactions: (query: object) =>
-    [...riderKeys.all, "wallet", "transactions", query] as const,
-  withdrawals: (query: ListPayoutsQueryDto) => [...riderKeys.all, "withdrawals", query] as const,
+  settlements: () => [...riderKeys.all, "settlements"] as const,
+  settlementEntries: (query: ListSettlementQueryDto) =>
+    [...riderKeys.all, "settlements", "entries", query] as const,
+  settlementPayments: (query: ListSettlementQueryDto) =>
+    [...riderKeys.all, "settlements", "payments", query] as const,
+  restaurantSettlements: (restaurantId: string) =>
+    ["restaurant-rider-settlements", restaurantId] as const,
+  restaurantSettlementEntries: (restaurantId: string, query: ListSettlementQueryDto) =>
+    ["restaurant-rider-settlements", restaurantId, "entries", query] as const,
+  restaurantSettlementPayments: (restaurantId: string, query: ListSettlementQueryDto) =>
+    ["restaurant-rider-settlements", restaurantId, "payments", query] as const,
 };
 
 /**
@@ -233,58 +241,90 @@ export function useEarningsSummary(enabled = true) {
   });
 }
 
-export function useRiderWallet(enabled = true) {
+// ── Settlement with restaurants (rider side) ──────────────────
+
+export function useRiderSettlements(enabled = true) {
   return useQuery({
-    queryKey: riderKeys.wallet(),
-    queryFn: () => riderApi.getWallet(),
+    queryKey: riderKeys.settlements(),
+    queryFn: () => riderApi.getSettlementBalances(),
     enabled,
     staleTime: 30 * 1000,
   });
 }
 
-export function useWalletTransactions(
-  query?: { page?: number; limit?: number; sortBy?: string; sortOrder?: "asc" | "desc" },
-  enabled = true,
-) {
+export function useRiderSettlementEntries(query: ListSettlementQueryDto, enabled = true) {
   return useQuery({
-    queryKey: riderKeys.walletTransactions(query ?? {}),
-    queryFn: () => riderApi.getWalletTransactions(query),
-    enabled,
-    staleTime: 60 * 1000,
-  });
-}
-
-export function useWithdrawals(query?: ListPayoutsQueryDto, enabled = true) {
-  return useQuery({
-    queryKey: riderKeys.withdrawals(query ?? {}),
-    queryFn: () => riderApi.getWithdrawals(query),
+    queryKey: riderKeys.settlementEntries(query),
+    queryFn: () => riderApi.getSettlementEntries(query),
     enabled,
     staleTime: 30 * 1000,
   });
 }
 
-export function useRequestWithdrawal() {
+export function useRiderSettlementPayments(query: ListSettlementQueryDto, enabled = true) {
+  return useQuery({
+    queryKey: riderKeys.settlementPayments(query),
+    queryFn: () => riderApi.getSettlementPayments(query),
+    enabled,
+    staleTime: 30 * 1000,
+  });
+}
+
+export function useRecordFeesReceived() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (data: RequestPayoutDto) => riderApi.requestWithdrawal(data),
+    mutationFn: (data: RecordFeesReceivedDto) => riderApi.recordFeesReceived(data),
     onSuccess: () => {
-      // The request holds money out of the wallet immediately, so the balance
-      // is as stale as the list is.
-      void queryClient.invalidateQueries({ queryKey: [...riderKeys.all, "withdrawals"] });
-      void queryClient.invalidateQueries({ queryKey: riderKeys.wallet() });
+      void queryClient.invalidateQueries({ queryKey: riderKeys.settlements() });
     },
   });
 }
 
-export function useCancelWithdrawal() {
+// ── Settlement with riders (restaurant side) ──────────────────
+
+export function useRestaurantRiderSettlements(restaurantId: string | undefined) {
+  return useQuery({
+    queryKey: riderKeys.restaurantSettlements(restaurantId ?? ""),
+    queryFn: () => riderApi.getRestaurantRiderBalances(restaurantId ?? ""),
+    enabled: restaurantId !== undefined,
+    staleTime: 30 * 1000,
+  });
+}
+
+export function useRestaurantRiderEntries(
+  restaurantId: string | undefined,
+  query: ListSettlementQueryDto,
+) {
+  return useQuery({
+    queryKey: riderKeys.restaurantSettlementEntries(restaurantId ?? "", query),
+    queryFn: () => riderApi.getRestaurantRiderEntries(restaurantId ?? "", query),
+    enabled: restaurantId !== undefined,
+    staleTime: 30 * 1000,
+  });
+}
+
+export function useRestaurantRiderPayments(
+  restaurantId: string | undefined,
+  query: ListSettlementQueryDto,
+) {
+  return useQuery({
+    queryKey: riderKeys.restaurantSettlementPayments(restaurantId ?? "", query),
+    queryFn: () => riderApi.getRestaurantRiderPayments(restaurantId ?? "", query),
+    enabled: restaurantId !== undefined,
+    staleTime: 30 * 1000,
+  });
+}
+
+export function useRecordCashReceived(restaurantId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (id: string) => riderApi.cancelWithdrawal(id),
+    mutationFn: (data: RecordCashReceivedDto) => riderApi.recordCashReceived(restaurantId, data),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: [...riderKeys.all, "withdrawals"] });
-      void queryClient.invalidateQueries({ queryKey: riderKeys.wallet() });
+      void queryClient.invalidateQueries({
+        queryKey: riderKeys.restaurantSettlements(restaurantId),
+      });
     },
   });
 }

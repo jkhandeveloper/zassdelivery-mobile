@@ -246,6 +246,7 @@ export const AssignmentStatus = {
 export type AssignmentStatus = (typeof AssignmentStatus)[keyof typeof AssignmentStatus];
 
 export const DriverEarningType = {
+  DELIVERY_FEE: "DELIVERY_FEE",
   BASE_FARE: "BASE_FARE",
   DISTANCE: "DISTANCE",
   TIP: "TIP",
@@ -254,21 +255,14 @@ export const DriverEarningType = {
 } as const;
 export type DriverEarningType = (typeof DriverEarningType)[keyof typeof DriverEarningType];
 
-export const PayoutStatus = {
-  PENDING: "PENDING",
-  APPROVED: "APPROVED",
-  PAID: "PAID",
-  REJECTED: "REJECTED",
-  CANCELLED: "CANCELLED",
+export const RiderSettlementDirection = {
+  /** The rider handed over order money they collected. */
+  RIDER_TO_RESTAURANT: "RIDER_TO_RESTAURANT",
+  /** The restaurant paid the rider delivery fees it owed. */
+  RESTAURANT_TO_RIDER: "RESTAURANT_TO_RIDER",
 } as const;
-export type PayoutStatus = (typeof PayoutStatus)[keyof typeof PayoutStatus];
-
-export const PayoutMethod = {
-  BANK_TRANSFER: "BANK_TRANSFER",
-  JAZZCASH: "JAZZCASH",
-  EASYPAISA: "EASYPAISA",
-} as const;
-export type PayoutMethod = (typeof PayoutMethod)[keyof typeof PayoutMethod];
+export type RiderSettlementDirection =
+  (typeof RiderSettlementDirection)[keyof typeof RiderSettlementDirection];
 
 export const DevicePlatform = {
   ANDROID: "ANDROID",

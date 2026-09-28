@@ -90,7 +90,7 @@ function FavoritesScreen() {
                     {item.item.name}
                   </Text>
                   <Text className="font-sans text-[12px] text-muted">
-                    {isRestaurant ? "Restaurant" : "Dish"}
+                    {isRestaurant ? "Business" : "Dish"}
                   </Text>
                 </View>
 
@@ -112,8 +112,8 @@ function FavoritesScreen() {
           ListEmptyComponent={
             <EmptyState
               title="Nothing saved yet"
-              description="Tap the heart on a restaurant to keep it here."
-              action={{ label: "Browse restaurants", onPress: () => router.push("/restaurants") }}
+              description="Tap the heart on a business to keep it here."
+              action={{ label: "Browse businesses", onPress: () => router.push("/restaurants") }}
             />
           }
         />

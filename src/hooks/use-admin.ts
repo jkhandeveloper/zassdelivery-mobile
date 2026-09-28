@@ -34,7 +34,6 @@ import type {
   AssignOrderDto,
   CancelAssignmentDto,
   ListAssignmentsQueryDto,
-  ListPayoutsQueryDto,
   ListRidersQueryDto,
   RejectDocumentDto,
   RejectRiderDto,
@@ -105,7 +104,6 @@ export const adminKeys = {
   ledger: (query: LedgerSummaryQueryDto) => [...adminKeys.all, "ledger", query] as const,
   webhooks: (query: ListWebhookEventsQueryDto) => [...adminKeys.all, "webhooks", query] as const,
 
-  payouts: (query: ListPayoutsQueryDto) => [...adminKeys.all, "payouts", query] as const,
 
   coupons: (query: ListCouponsQueryDto) => [...adminKeys.all, "coupons", query] as const,
   banners: (query: ListBannersQueryDto) => [...adminKeys.all, "banners", query] as const,
@@ -489,39 +487,6 @@ export function useFailPayment() {
 
 export function useReplayWebhook() {
   return useAdminMutation((id: string) => paymentApi.replayWebhook(id), PAYMENT_KEYS);
-}
-
-// ── Rider payouts ──────────────────────────────────────────────
-
-export function useAdminPayouts(query?: ListPayoutsQueryDto, enabled = true) {
-  return useQuery({
-    queryKey: adminKeys.payouts(query ?? {}),
-    queryFn: () => riderApi.listWithdrawals(query),
-    enabled,
-    staleTime: 30 * 1000,
-  });
-}
-
-const PAYOUT_KEYS = [[...adminKeys.all, "payouts"]] as const;
-
-export function useApprovePayout() {
-  return useAdminMutation((id: string) => riderApi.approveWithdrawal(id), PAYOUT_KEYS);
-}
-
-export function useMarkPayoutPaid() {
-  return useAdminMutation(
-    ({ id, data }: { id: string; data: { paymentReference?: string } }) =>
-      riderApi.markWithdrawalPaid(id, data),
-    PAYOUT_KEYS,
-  );
-}
-
-export function useRejectPayout() {
-  return useAdminMutation(
-    ({ id, data }: { id: string; data: { reason: string } }) =>
-      riderApi.rejectWithdrawal(id, data),
-    PAYOUT_KEYS,
-  );
 }
 
 // ── Coupons ────────────────────────────────────────────────────

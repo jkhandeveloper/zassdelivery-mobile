@@ -340,9 +340,9 @@ function RiderDashboard({ rider }: { rider: RiderDto }) {
             <Button
               variant="outline"
               className="flex-1"
-              onPress={() => router.push("/rider/wallet")}
+              onPress={() => router.push("/rider/cash")}
             >
-              Wallet
+              Cash & fees
             </Button>
           </View>
         </View>

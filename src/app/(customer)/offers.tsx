@@ -153,7 +153,7 @@ function OffersScreen() {
             <EmptyState
               title="No offers right now"
               description="Check back — new codes are added regularly."
-              action={{ label: "Browse restaurants", onPress: () => router.push("/restaurants") }}
+              action={{ label: "Browse businesses", onPress: () => router.push("/restaurants") }}
             />
           }
         />

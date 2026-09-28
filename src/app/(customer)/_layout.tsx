@@ -92,7 +92,7 @@ export default function CustomerLayout() {
       <Tabs.Screen
         name="restaurants"
         options={{
-          title: "Restaurants",
+          title: "Businesses",
           tabBarIcon: ({ color, size }) => <UtensilsCrossed size={size} color={color} />,
         }}
       />

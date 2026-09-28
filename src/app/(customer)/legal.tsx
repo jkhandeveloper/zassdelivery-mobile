@@ -76,26 +76,26 @@ export default function LegalScreen() {
 
         <Section title="How payment works">
           <Body muted className="text-[14px]">
-            You pay the restaurant, not us. Depending on what the restaurant offers, that is
+            You pay the business, not us. Depending on what the business offers, that is
             cash to the rider at your door, or a transfer you make by scanning the
-            restaurant&apos;s own QR code. ZassDelivery never holds your money and never takes a
+            business&apos;s own QR code. ZassDelivery never holds your money and never takes a
             cut of your order.
           </Body>
           <Body muted className="text-[14px]">
-            We charge restaurants a monthly subscription to be listed. That is the whole of our
+            We charge businesses a monthly subscription to be listed. That is the whole of our
             relationship with the money.
           </Body>
         </Section>
 
         <Section title="Refunds and problems with an order">
           <Body muted className="text-[14px]">
-            Because the restaurant took the payment, a refund is theirs to give. If something is
+            Because the business took the payment, a refund is theirs to give. If something is
             wrong — missing items, cold food, an order that never arrived — open a support
-            ticket in the app. We will take it up with the restaurant on your behalf and press
+            ticket in the app. We will take it up with the business on your behalf and press
             them for a resolution, but we cannot reverse a payment we never received.
           </Body>
           <Body muted className="text-[14px]">
-            You can cancel an order yourself while the restaurant has not yet started cooking.
+            You can cancel an order yourself while the business has not yet started cooking.
             After that, cancellation is at their discretion.
           </Body>
         </Section>
@@ -112,7 +112,7 @@ export default function LegalScreen() {
         <Section title="Location">
           <Body muted className="text-[14px]">
             We ask for your location only when you tap to use it — to pin a new address, or to
-            sort restaurants by distance. We do not track you in the background.
+            sort businesses by distance. We do not track you in the background.
           </Body>
           <Body muted className="text-[14px]">
             Riders are different, and they are told so separately: while a rider is carrying

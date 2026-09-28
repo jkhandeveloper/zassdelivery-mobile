@@ -80,7 +80,7 @@ function Ticket({ order }: { order: OrderDto }) {
           style: "destructive",
           onPress: () =>
             rejectOrder.mutate(
-              { id: order.id, data: { reason: "The restaurant could not accept this order" } },
+              { id: order.id, data: { reason: "The business could not accept this order" } },
               { onSuccess: () => toast.success("Order rejected"), onError },
             ),
         },

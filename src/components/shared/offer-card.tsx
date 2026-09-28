@@ -69,7 +69,7 @@ export function OfferCard({ offer }: { offer: AssignmentDto }) {
 
   const onAccept = React.useCallback(() => {
     acceptOffer.mutate(offer.id, {
-      onSuccess: () => toast.success("Offer accepted", { description: "Head to the restaurant." }),
+      onSuccess: () => toast.success("Offer accepted", { description: "Head to the business." }),
       onError: (error) =>
         toast.error(
           error instanceof ApiError
@@ -173,7 +173,8 @@ export function OfferCard({ offer }: { offer: AssignmentDto }) {
         {offer.order.cashToCollect > 0 ? (
           <View className="mt-1 rounded-input bg-warning-soft px-3 py-2">
             <Text className="font-sans text-[13px] font-semibold text-warning">
-              Collect {formatPrice(offer.order.cashToCollect)} in cash
+              Collect {formatPrice(offer.order.cashToCollect)} in cash · hand{" "}
+              {formatPrice(offer.order.cashForRestaurant)} to the business
             </Text>
           </View>
         ) : null}

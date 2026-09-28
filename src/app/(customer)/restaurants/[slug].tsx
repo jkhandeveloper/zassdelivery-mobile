@@ -289,7 +289,7 @@ export default function RestaurantScreen() {
           ) : (
             <EmptyState
               title="No menu yet"
-              description="This restaurant hasn't published its dishes."
+              description="This business hasn't published its dishes."
             />
           )
         }

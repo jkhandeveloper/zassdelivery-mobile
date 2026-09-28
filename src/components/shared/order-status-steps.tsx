@@ -43,7 +43,7 @@ const STEPS: readonly Step[] = [
   },
   {
     key: "confirmed",
-    label: "Restaurant confirmed",
+    label: "Business confirmed",
     reachedBy: [
       OrderStatus.CONFIRMED,
       OrderStatus.PREPARING,
@@ -101,7 +101,7 @@ export function OrderStatusSteps({
       status === OrderStatus.CANCELLED
         ? "Order cancelled"
         : status === OrderStatus.REJECTED
-          ? "Order rejected by the restaurant"
+          ? "Order rejected by the business"
           : "Order failed";
 
     return (

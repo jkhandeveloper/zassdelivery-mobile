@@ -36,7 +36,7 @@ import { BusinessType, PriceRange, type PriceRange as PriceRangeType } from "@/t
  */
 
 const registerSchema = z.object({
-  name: z.string().trim().min(2, "Enter the restaurant name").max(120, "That name is too long"),
+  name: z.string().trim().min(2, "Enter the business name").max(120, "That name is too long"),
   description: z.string().trim().optional(),
   phone: z
     .string()
@@ -140,7 +140,7 @@ export default function VendorRegisterScreen() {
       toast.error(
         error instanceof ApiError
           ? error.status === 409
-            ? "You already have a restaurant registered."
+            ? "You already have a business registered."
             : error.message
           : "Couldn't register that. Please try again.",
       );
@@ -160,7 +160,7 @@ export default function VendorRegisterScreen() {
           <ChevronLeft size={24} color="#0E7490" />
         </Pressable>
         <Text className="font-display text-[19px] font-bold text-primary">
-          Register your restaurant
+          Register your business
         </Text>
       </View>
 
@@ -173,7 +173,7 @@ export default function VendorRegisterScreen() {
         <ControlledInput
           control={control}
           name="name"
-          label="Restaurant name"
+          label="Business name"
           required
           editable={!isSubmitting}
         />
@@ -323,7 +323,7 @@ export default function VendorRegisterScreen() {
             Pin your location
           </Text>
           <Body muted className="text-[13px]">
-            Do this while you are at the restaurant. Your delivery area and every order map are
+            Do this while you are at the business. Your delivery area and every order map are
             worked out from this point.
           </Body>
 

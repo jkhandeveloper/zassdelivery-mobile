@@ -95,7 +95,7 @@ function CheckoutScreen() {
           Nothing to check out
         </Heading>
         <Button variant="outline" onPress={() => router.replace("/restaurants")}>
-          Browse restaurants
+          Browse businesses
         </Button>
       </View>
     );
@@ -229,7 +229,7 @@ function CheckoutScreen() {
             <LoadingState />
           ) : available.length === 0 ? (
             <Body muted className="text-[13px]">
-              No payment method is available for this restaurant right now.
+              No payment method is available for this business right now.
             </Body>
           ) : (
             available.map((gateway) => {
@@ -267,7 +267,7 @@ function CheckoutScreen() {
           */}
           {paymentMethod === "QR_TRANSFER" ? (
             <Body muted className="text-[12px]">
-              You&apos;ll scan the restaurant&apos;s QR code and pay them directly. The code
+              You&apos;ll scan the business&apos;s QR code and pay them directly. The code
               appears on your order screen once it&apos;s placed.
             </Body>
           ) : null}
@@ -330,7 +330,7 @@ function CheckoutScreen() {
 
         {/* ── Note ──────────────────────────────────────────── */}
         <Card>
-          <Field label="Note for the restaurant">
+          <Field label="Note for the business">
             <Input
               value={note}
               onChangeText={setNote}

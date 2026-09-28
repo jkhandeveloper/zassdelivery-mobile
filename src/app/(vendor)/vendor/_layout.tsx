@@ -54,6 +54,7 @@ export default function VendorLayout() {
 
         {/* Reached from Settings and the dashboard. */}
         <Tabs.Screen name="billing" options={{ href: null }} />
+        <Tabs.Screen name="rider-cash" options={{ href: null }} />
         <Tabs.Screen name="staff" options={{ href: null }} />
         <Tabs.Screen name="support" options={{ href: null }} />
         {/* Reached from the gate when the owner has no listing yet. */}

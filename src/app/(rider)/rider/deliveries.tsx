@@ -141,7 +141,7 @@ function ActiveRun({ run }: { run: AssignmentDto }) {
           >
             Directions
           </Button>
-          <CallButton phone={order.restaurantPhone} label="the restaurant" />
+          <CallButton phone={order.restaurantPhone} label="the business" />
         </View>
       </View>
 
@@ -178,6 +178,10 @@ function ActiveRun({ run }: { run: AssignmentDto }) {
           <Text className="font-sans text-[14px] font-semibold text-warning">
             Collect {formatPrice(order.cashToCollect)} in cash at the door
           </Text>
+          <Text className="font-sans text-[12px] text-warning">
+            Keep your {formatPrice(order.riderFee)} fee, hand{" "}
+            {formatPrice(order.cashForRestaurant)} to the business
+          </Text>
         </View>
       ) : null}
 
@@ -196,7 +200,7 @@ function ActiveRun({ run }: { run: AssignmentDto }) {
       {status === OrderStatus.READY_FOR_PICKUP ? (
         <View className="gap-2">
           <Body muted className="text-[13px]">
-            At the restaurant? Confirming pickup sends the customer a four-digit code you&apos;ll
+            At the business? Confirming pickup sends the customer a four-digit code you&apos;ll
             need at the door.
           </Body>
           <Button
@@ -255,9 +259,9 @@ function ActiveRun({ run }: { run: AssignmentDto }) {
                 {
                   onSuccess: (result) => {
                     setCode("");
-                    toast.success("Delivered", {
-                      description: `You earned ${formatPrice(result.earned)}`,
-                    });
+                    // The message says who owes whom for this order: keep the
+                    // fee and hand the rest over, or the restaurant owes the fee.
+                    toast.success("Delivered", { description: result.message });
                   },
                   onError,
                 },
@@ -269,7 +273,7 @@ function ActiveRun({ run }: { run: AssignmentDto }) {
         </View>
       ) : (
         <Body muted className="text-[13px]">
-          Waiting on the restaurant. The next step appears once the food is ready to collect.
+          Waiting on the business. The next step appears once the food is ready to collect.
         </Body>
       )}
     </Card>

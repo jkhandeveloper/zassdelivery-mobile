@@ -182,7 +182,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         locationAlwaysAndWhenInUsePermission:
           "ZassDeliver shares your location with the customer while you are on a delivery.",
         locationWhenInUsePermission:
-          "ZassDeliver uses your location to show restaurants that deliver to you.",
+          "ZassDeliver uses your location to show businesses that deliver to you.",
         // Riders only. The customer and vendor apps never request this.
         isAndroidBackgroundLocationEnabled: true,
         isAndroidForegroundServiceEnabled: true,

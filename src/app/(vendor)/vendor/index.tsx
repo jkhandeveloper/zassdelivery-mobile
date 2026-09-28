@@ -250,6 +250,17 @@ function VendorDashboard({ restaurant }: { restaurant: RestaurantAdminDto }) {
             </Card>
           )}
 
+          <Card>
+            <Button
+              variant="ghost"
+              fullWidth
+              onPress={() => router.push("/vendor/rider-cash")}
+              icon={<ChevronRight size={16} color="#0E7490" />}
+            >
+              Rider cash & fees
+            </Button>
+          </Card>
+
           {/*
           Billing is owner-only — the API refuses it for VENDOR_STAFF rather
           than merely hiding it, so showing the link to a kitchen account would
