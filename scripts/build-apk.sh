@@ -2,7 +2,7 @@
 #
 # Build a standalone "ZassDeliver (Preview)" APK in WSL — no Metro, no cloud.
 #
-#   ./scripts/build-apk.sh                          # API on this machine's LAN IP
+#   ./scripts/build-apk.sh                          # the origin in .env, else this machine's LAN IP
 #   ./scripts/build-apk.sh http://192.168.1.50:3002 # API somewhere specific
 #   ./scripts/build-apk.sh https://api.zassdeliver.com
 #
@@ -23,6 +23,12 @@ export ANDROID_HOME="${ANDROID_HOME:-$HOME/Android/Sdk}"
 export PATH="$JAVA_HOME/bin:$ANDROID_HOME/platform-tools:$PATH"
 
 origin="${1:-}"
+
+# No argument: an origin set in .env wins over guessing the LAN address, so
+# pointing .env at the live server is enough to build against it.
+if [[ -z "$origin" ]]; then
+  origin="$(grep -E '^EXPO_PUBLIC_SOCKET_URL=.+' .env 2>/dev/null | tail -n 1 | cut -d= -f2- || true)"
+fi
 
 if [[ -z "$origin" ]]; then
   ip="$(hostname -I | awk '{print $1}')"
