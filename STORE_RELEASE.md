@@ -110,8 +110,6 @@ eas env:create --environment production --name EXPO_PUBLIC_API_URL \
 eas env:create --environment production --name EXPO_PUBLIC_SOCKET_URL \
   --value https://api.zassdeliver.com --visibility plaintext
 
-eas env:create --environment production --name GOOGLE_MAPS_ANDROID_KEY \
-  --value <key> --visibility secret
 ```
 
 Check them with `eas env:list --environment production`.

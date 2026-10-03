@@ -58,10 +58,6 @@ else
   echo "⚠ API did not answer at $EXPO_PUBLIC_API_URL/health — the APK will build, but will not connect until it does."
 fi
 
-if [[ -z "$(grep -E '^GOOGLE_MAPS_ANDROID_KEY=.+' .env 2>/dev/null || true)" && -z "${GOOGLE_MAPS_ANDROID_KEY:-}" ]]; then
-  echo "⚠ GOOGLE_MAPS_ANDROID_KEY is not set — order tracking shows a route card instead of a map."
-fi
-
 # --clean: android/ is generated from app.config.ts, and a stale one would keep
 # the previous variant's package name.
 #

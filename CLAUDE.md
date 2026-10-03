@@ -22,7 +22,7 @@ ZassDeliver mobile: an Expo SDK 57 / React Native app (Android + iOS) for the **
 
 ## Configuration
 
-- `app.config.ts` (dynamic; there is no `app.json`) chooses the bundle ID and app name from `EAS_BUILD_PROFILE` (`com.zassdeliver.app[.dev|.preview]`), so all three variants can be installed side by side. It defaults to `development` locally. Native secrets come from the env: `GOOGLE_MAPS_ANDROID_KEY`, `EAS_PROJECT_ID`, `EXPO_UPDATE_URL`. See `.env.example`.
+- `app.config.ts` (dynamic; there is no `app.json`) chooses the bundle ID and app name from `EAS_BUILD_PROFILE` (`com.zassdeliver.app[.dev|.preview]`), so all three variants can be installed side by side. It defaults to `development` locally. Native settings come from the env: `EAS_PROJECT_ID`, `EXPO_UPDATE_URL`. The delivery map is MapLibre on OpenFreeMap tiles and needs no key. See `.env.example`.
 - `src/lib/env.ts` resolves the API. An explicit `EXPO_PUBLIC_API_URL` / `EXPO_PUBLIC_SOCKET_URL` wins. In dev it otherwise falls back to the Metro host's LAN IP on port 3002. `localhost` never works from a phone, and release builds throw if the URL is unset. The NestJS server must bind `0.0.0.0`.
 - Experiments are on: `typedRoutes` and `reactCompiler`. The New Architecture is enabled.
 - Path aliases: `@/*` → `src/*`, `@/assets/*` → `assets/*`.

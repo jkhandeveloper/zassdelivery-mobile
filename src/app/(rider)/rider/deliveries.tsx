@@ -43,8 +43,8 @@ function openDirections(latitude: number | null, longitude: number | null, label
     return;
   }
 
-  // Apple Maps on iOS, Google Maps on Android — the geo: scheme is honoured by
-  // whatever the rider has set as their default, which is what they will be
+  // Apple Maps on iOS; on Android the geo: scheme is honoured by whatever maps
+  // app the rider has set as their default, which is what they will be
   // fastest in.
   const url =
     Platform.OS === "ios"
@@ -53,9 +53,10 @@ function openDirections(latitude: number | null, longitude: number | null, label
 
   void Linking.openURL(url).catch(() => {
     // Falling back to the web keeps this working on a device with no maps app
-    // and inside an emulator without Play services.
+    // and inside an emulator without Play services. OpenStreetMap's planner
+    // routes from the browser's own location when the start is left empty.
     void Linking.openURL(
-      `https://www.google.com/maps/dir/?api=1&destination=${latitude},${longitude}`,
+      `https://www.openstreetmap.org/directions?engine=fossgis_osrm_car&route=%3B${latitude}%2C${longitude}`,
     ).catch(() => toast.error("Couldn't open a maps app."));
   });
 }

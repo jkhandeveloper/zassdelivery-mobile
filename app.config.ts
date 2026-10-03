@@ -3,10 +3,10 @@ import type { ConfigContext, ExpoConfig } from "expo/config";
 /**
  * Dynamic app config.
  *
- * TypeScript rather than `app.json` because three things have to come from the
- * environment: the Google Maps key (a secret that must not be committed), the
- * bundle identifier (so a development build can sit on the same phone as the
- * store build), and the API URL (which differs per build profile).
+ * TypeScript rather than `app.json` because two things have to come from the
+ * environment: the bundle identifier (so a development build can sit on the
+ * same phone as the store build), and the API URL (which differs per build
+ * profile).
  *
  * `EAS_BUILD_PROFILE` is set by EAS during a cloud build and is absent locally,
  * which is what makes "development" the right default.
@@ -96,21 +96,14 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       "POST_NOTIFICATIONS",
       "VIBRATE",
     ],
-    config: {
-      googleMaps: {
-        // Android has no system map; react-native-maps needs a Google key.
-        // Without one, mounting a MapView throws and takes the app down, so
-        // DeliveryMap checks `extra.googleMapsAndroid` and draws a map-less
-        // route card instead.
-        apiKey: process.env.GOOGLE_MAPS_ANDROID_KEY ?? "",
-      },
-    },
   },
 
   plugins: [
     "./plugins/with-android-build-fixes",
     "expo-router",
     "expo-secure-store",
+    // The delivery map: MapLibre Native on OpenFreeMap tiles, no API key.
+    "@maplibre/maplibre-react-native",
     [
       // Embedded at build time rather than loaded with useFonts(), so the first
       // frame already has them — no splash delay and no system-font flash.
@@ -243,10 +236,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
 
   extra: {
     variant: VARIANT,
-    // Read by DeliveryMap. Mounting a Google MapView on Android without a key
-    // is not a blank map but a native RuntimeException that kills the app, so
-    // the JS has to know at runtime whether one was compiled in.
-    googleMapsAndroid: Boolean(process.env.GOOGLE_MAPS_ANDROID_KEY),
     eas: { projectId: EAS_PROJECT_ID },
   },
 });

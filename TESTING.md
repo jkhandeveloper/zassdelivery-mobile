@@ -79,7 +79,7 @@ on the sign-in form.
 ### A5. Why you need a development build, not Expo Go
 
 **Expo Go will not run this app.** It ships a fixed set of native modules, and this app uses
-several it does not include: `react-native-maps`, `expo-secure-store`, background
+several it does not include: `@maplibre/maplibre-react-native`, `expo-secure-store`, background
 `expo-location`, `expo-notifications`. In Expo Go the app would crash on launch at the keychain
 read.
 
@@ -219,8 +219,7 @@ npm run apk -- https://api.zassdeliver.com   # or any other origin
 adb install -r dist/zassdeliver-preview.apk
 ```
 
-The script refuses a WSL NAT address (§A1), checks the API answers, and warns if the Maps key
-is missing. The first build downloads Gradle and every Maven dependency (~30+ minutes on a slow
+The script refuses a WSL NAT address (§A1) and checks the API answers. The first build downloads Gradle and every Maven dependency (~30+ minutes on a slow
 link); after that a rebuild takes about 8 minutes. The APK is ~140 MB because it carries all four
 CPU architectures, so the same file runs on phones and on the x86_64 emulator. The APK is signed with the debug keystore — fine for sideloading, not for the Play
 Store.
@@ -231,7 +230,6 @@ Store.
 ```bash
 eas env:create --environment preview --name EXPO_PUBLIC_API_URL     --value https://api.zassdeliver.com/api/v1 --visibility plaintext
 eas env:create --environment preview --name EXPO_PUBLIC_SOCKET_URL  --value https://api.zassdeliver.com        --visibility plaintext
-eas env:create --environment preview --name GOOGLE_MAPS_ANDROID_KEY --value <key>                              --visibility secret
 eas env:create --environment preview --name EAS_PROJECT_ID          --value <id>                               --visibility plaintext
 eas build --profile preview --platform android
 ```
@@ -291,8 +289,8 @@ need no App Review; external testers do.
 - **Keychain.** Force-quit and reopen — you should still be signed in. This is the path
   `store/auth-store.ts` splits tokens across keys for, because iOS rejects large keychain
   values.
-- **Apple Maps.** iOS uses Apple Maps, Android uses Google — the tracking screen renders
-  through two different SDKs and needs looking at on both.
+- **The map.** Both platforms draw it with MapLibre on OpenFreeMap tiles, so it should look
+  the same on each — check dark mode too, which switches to OpenFreeMap's dark style.
 - **Background location.** Lock the phone mid-delivery, wait two minutes, unlock. Tracking
   should have continued.
 
@@ -307,7 +305,7 @@ need no App Review; external testers do.
 | `adb devices` is empty | WSL not restarted after `.wslconfig` (§A1), or the phone is on a different Wi-Fi. |
 | Metro QR code will not connect | Phone and PC on different networks, or Windows Firewall is blocking port 8081. Try `npx expo start --tunnel`. |
 | Crash on launch, keychain error | You are using Expo Go. Build a development build (§A5). |
-| **Order screen shows a route card, not a map** | Missing `GOOGLE_MAPS_ANDROID_KEY` in `.env`. The app deliberately skips the map: a Google `MapView` without a key crashes on Android. Get a key from Google Cloud Console, enable **Maps SDK for Android**, then rebuild — it is compiled in, so Metro reload is not enough. |
+| **Map says it couldn't load** | The tiles come from `tiles.openfreemap.org` over the network. Check the phone has internet; the rider marker data comes from the API and keeps updating regardless. |
 | Rider marker never appears | The rider has not accepted a run, or denied location. Check the rider dashboard for the location warning. |
 | Rider marker frozen | Look for the amber "Not receiving live updates" banner on the tracking screen. That is the socket, not the rider. |
 | Changes do not appear | JS changes reload; native config (`app.config.ts`, plugins, new native deps) needs a rebuild. |

@@ -130,7 +130,7 @@ start.
 
 - [ ] Push notifications (`expo-notifications` + FCM + APNs), registered per role
 - [x] Camera / image picker → the existing `/uploads` multipart endpoint
-- [x] Maps (`react-native-maps`, Google on Android, Apple on iOS) replacing Leaflet
+- [x] Maps (MapLibre on OpenFreeMap tiles, the same on Android, iOS and web — no API key)
 - [ ] QR display and scanning (`expo-camera`)
 - [ ] Deep links and universal links (`zassdeliver://order/[id]`)
 - [ ] Offline handling and optimistic cart

@@ -77,7 +77,6 @@ jobs:
 
       - name: Build APK
         env:
-          GOOGLE_MAPS_ANDROID_KEY: ${{ secrets.GOOGLE_MAPS_ANDROID_KEY }}
           EAS_PROJECT_ID: ${{ vars.EAS_PROJECT_ID }}
           EXPO_UPDATE_URL: ${{ vars.EXPO_UPDATE_URL }}
         run: ./scripts/build-apk.sh "$API_ORIGIN"
