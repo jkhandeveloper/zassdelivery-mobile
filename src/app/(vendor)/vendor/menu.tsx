@@ -325,5 +325,5 @@ function VendorMenu({ restaurant }: { restaurant: RestaurantAdminDto }) {
 }
 
 export default function Screen() {
-  return <VendorGate>{(restaurant) => <VendorMenu restaurant={restaurant} />}</VendorGate>;
+  return <VendorGate allowUnapproved>{(restaurant) => <VendorMenu restaurant={restaurant} />}</VendorGate>;
 }

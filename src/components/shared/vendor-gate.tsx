@@ -1,14 +1,18 @@
 import { useRouter } from "expo-router";
 import * as React from "react";
-import { Text } from "react-native";
+import { Text, View } from "react-native";
+import { SafeAreaInsetsContext, useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useAuth } from "@/components/providers";
 import { GateSignOut } from "@/components/shared/hero-sign-out";
 import { Button } from "@/components/ui/button";
 import { Body, Card, Heading, Screen } from "@/components/ui/primitives";
 import { ErrorState, LoadingState } from "@/components/ui/states";
+import { toast } from "@/components/ui/toast";
+import { useResubmitRestaurant } from "@/hooks/use-vendor";
 import { useVendorRestaurant } from "@/hooks/use-vendor-restaurant";
-import { hasText } from "@/lib/utils";
+import { ApiError } from "@/lib/api-client";
+import { cn, hasText } from "@/lib/utils";
 import { UserRole } from "@/types/auth";
 import { RestaurantStatus } from "@/types/enums";
 import type { RestaurantAdminDto } from "@/types/restaurant";
@@ -30,15 +34,25 @@ import type { RestaurantAdminDto } from "@/types/restaurant";
  * more use than a form they cannot submit.
  */
 export function VendorGate({
+  allowUnapproved = false,
   allowSuspended = false,
   children,
 }: {
+  /**
+   * Lets a pending or rejected listing through, behind a banner. Set by the
+   * screens an owner needs *before* approval — settings and the menu. Without
+   * it the "set up your menu" and "update your details" buttons below lead
+   * straight back to the screen they were pressed on.
+   */
+  allowUnapproved?: boolean;
   allowSuspended?: boolean;
   children: (restaurant: RestaurantAdminDto) => React.ReactNode;
 }) {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const vendor = useVendorRestaurant();
+  const resubmit = useResubmitRestaurant();
 
   const isOwner = user?.role === UserRole.VENDOR_OWNER;
 
@@ -88,7 +102,25 @@ export function VendorGate({
     return <ErrorState error={new Error("No business was returned.")} onRetry={vendor.refetch} />;
   }
 
-  if (restaurant.status === RestaurantStatus.PENDING_APPROVAL) {
+  const resubmitButton = (
+    <Button
+      fullWidth
+      loading={resubmit.isPending}
+      onPress={() =>
+        resubmit.mutate(restaurant.id, {
+          onSuccess: () => toast.success("Sent back for review"),
+          onError: (error) =>
+            toast.error(
+              error instanceof ApiError ? error.message : "Couldn't resubmit your listing.",
+            ),
+        })
+      }
+    >
+      Resubmit for review
+    </Button>
+  );
+
+  if (restaurant.status === RestaurantStatus.PENDING_APPROVAL && !allowUnapproved) {
     return (
       <Screen scroll contentContainerClassName="justify-center gap-4">
         <Heading level={2}>Awaiting approval</Heading>
@@ -103,28 +135,32 @@ export function VendorGate({
         <Button variant="outline" fullWidth onPress={() => router.push("/vendor/menu")}>
           Set up your menu
         </Button>
+        <Button variant="outline" fullWidth onPress={() => router.push("/vendor/settings")}>
+          Business details and hours
+        </Button>
         <GateSignOut />
       </Screen>
     );
   }
 
-  if (restaurant.status === RestaurantStatus.REJECTED) {
+  if (restaurant.status === RestaurantStatus.REJECTED && !allowUnapproved) {
     return (
       <Screen scroll contentContainerClassName="justify-center gap-4">
         <Heading level={2}>Listing not approved</Heading>
 
-        {hasText(restaurant.rejectionReason) ? (
-          <Card className="border-danger bg-danger-soft">
-            <Text className="font-sans text-[14px] text-danger">
-              {restaurant.rejectionReason}
-            </Text>
-          </Card>
-        ) : null}
+        <Card className="border-danger bg-danger-soft">
+          <Text className="font-sans text-[14px] text-danger">
+            {hasText(restaurant.rejectionReason)
+              ? restaurant.rejectionReason
+              : "No reason was recorded. Support can tell you what needs changing."}
+          </Text>
+        </Card>
 
-        <Body muted>Correct what was raised above and submit it again.</Body>
-        <Button fullWidth onPress={() => router.push("/vendor/settings")}>
+        <Body muted>Correct what was raised above, then send it back for review.</Body>
+        <Button variant="outline" fullWidth onPress={() => router.push("/vendor/settings")}>
           Update your details
         </Button>
+        {isOwner ? resubmitButton : null}
         <GateSignOut />
       </Screen>
     );
@@ -153,6 +189,40 @@ export function VendorGate({
         </Button>
         <GateSignOut />
       </Screen>
+    );
+  }
+
+  if (
+    restaurant.status === RestaurantStatus.PENDING_APPROVAL ||
+    restaurant.status === RestaurantStatus.REJECTED
+  ) {
+    const rejected = restaurant.status === RestaurantStatus.REJECTED;
+
+    return (
+      <View className="flex-1 bg-canvas">
+        <View
+          className={cn("gap-2 px-4 pb-3", rejected ? "bg-danger-soft" : "bg-warning-soft")}
+          style={{ paddingTop: insets.top + 8 }}
+        >
+          <Text
+            className={cn(
+              "font-sans text-[13px] font-medium",
+              rejected ? "text-danger" : "text-warning",
+            )}
+          >
+            {rejected
+              ? hasText(restaurant.rejectionReason)
+                ? `Not approved: ${restaurant.rejectionReason}`
+                : "This listing was not approved. Fix your details, then resubmit."
+              : "Awaiting approval — not visible to customers yet. What you set up here is saved and goes live once approved."}
+          </Text>
+          {rejected && isOwner ? resubmitButton : null}
+        </View>
+        {/* The banner has already cleared the status bar; the screen must not pad for it again. */}
+        <SafeAreaInsetsContext.Provider value={{ ...insets, top: 0 }}>
+          {children(restaurant)}
+        </SafeAreaInsetsContext.Provider>
+      </View>
     );
   }
 

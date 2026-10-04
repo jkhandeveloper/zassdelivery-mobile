@@ -26,10 +26,16 @@ import {
   useUpdateMyRestaurant,
 } from "@/hooks/use-vendor";
 import { ApiError } from "@/lib/api-client";
+import { BUSINESS_TYPES, BUSINESS_TYPE_ORDER } from "@/lib/business-types";
 import { MAX_PAYMENT_QR_CODES, QR_PROVIDER_LABELS, QR_PROVIDER_ORDER } from "@/lib/payment-labels";
 import { cn, hasText } from "@/lib/utils";
 import { UserRole } from "@/types/auth";
-import { DayOfWeek, type PaymentQrProvider } from "@/types/enums";
+import {
+  type BusinessType,
+  DayOfWeek,
+  type PaymentQrProvider,
+  PriceRange,
+} from "@/types/enums";
 import type { BusinessHourDto, RestaurantAdminDto } from "@/types/restaurant";
 import type { PaymentQrCodeInputDto } from "@/types/payment";
 
@@ -68,9 +74,18 @@ const profileSchema = z.object({
     ),
   addressLine: z.string().trim().min(5, "Enter the street address"),
   landmark: z.string().trim().optional(),
+  businessType: z.enum(BUSINESS_TYPE_ORDER as [BusinessType, ...BusinessType[]]),
+  priceRange: z.enum([PriceRange.BUDGET, PriceRange.MODERATE, PriceRange.PREMIUM]),
   minOrderAmount: z.string().trim(),
   avgPreparationMinutes: z.string().trim(),
+  deliveryRadiusKm: z.string().trim(),
 });
+
+const PRICE_LABELS: Record<PriceRange, string> = {
+  [PriceRange.BUDGET]: "₨ Budget",
+  [PriceRange.MODERATE]: "₨₨ Moderate",
+  [PriceRange.PREMIUM]: "₨₨₨ Premium",
+};
 
 type ProfileValues = z.infer<typeof profileSchema>;
 
@@ -80,6 +95,9 @@ function ProfileSection({ restaurant }: { restaurant: RestaurantAdminDto }) {
   const {
     control,
     handleSubmit,
+    setValue,
+    watch,
+    reset,
     formState: { isSubmitting, isDirty },
   } = useForm<ProfileValues>({
     resolver: zodResolver(profileSchema),
@@ -89,11 +107,17 @@ function ProfileSection({ restaurant }: { restaurant: RestaurantAdminDto }) {
       phone: restaurant.phone,
       addressLine: restaurant.addressLine,
       landmark: restaurant.landmark ?? "",
+      businessType: restaurant.businessType,
+      priceRange: restaurant.priceRange,
       minOrderAmount: String(restaurant.minOrderAmount),
       avgPreparationMinutes: String(restaurant.avgPreparationMinutes),
+      deliveryRadiusKm: (restaurant.deliveryRadiusMeters / 1000).toFixed(1),
     },
     mode: "onTouched",
   });
+
+  const businessType = watch("businessType");
+  const priceRange = watch("priceRange");
 
   const onSubmit = handleSubmit(async (values) => {
     const minOrder = Number(values.minOrderAmount);
@@ -111,17 +135,33 @@ function ProfileSection({ restaurant }: { restaurant: RestaurantAdminDto }) {
       return;
     }
 
+    const radiusMeters = Math.round(Number(values.deliveryRadiusKm) * 1000);
+
+    // The API's own bounds, checked here so the message names the field.
+    if (!Number.isFinite(radiusMeters) || radiusMeters < 100 || radiusMeters > 50000) {
+      toast.error("Delivery radius must be between 0.1 and 50 km");
+      return;
+    }
+
     try {
       await update.mutateAsync({
         name: values.name,
-        ...(hasText(values.description) && { description: values.description }),
+        // Sent even when empty, as the web app does: leaving them out would
+        // make a description or landmark impossible to clear once set.
+        description: values.description ?? "",
         phone: values.phone,
         addressLine: values.addressLine,
-        ...(hasText(values.landmark) && { landmark: values.landmark }),
+        landmark: values.landmark ?? "",
+        businessType: values.businessType,
+        priceRange: values.priceRange,
         minOrderAmount: minOrder,
         avgPreparationMinutes: Math.round(prepMinutes),
+        deliveryRadiusMeters: radiusMeters,
       });
 
+      // What was just saved is the new baseline — otherwise the form stays
+      // "dirty" forever and Save never greys out again.
+      reset(values);
       toast.success("Details saved");
     } catch (error) {
       toast.error(error instanceof ApiError ? error.message : "Couldn't save those details.");
@@ -141,6 +181,38 @@ function ProfileSection({ restaurant }: { restaurant: RestaurantAdminDto }) {
         actually controls.
       */}
       <ControlledInput control={control} name="name" label="Name" required editable={!isSubmitting} />
+
+      <Field label="Kind of business" hint={BUSINESS_TYPES[businessType].hint}>
+        <View className="flex-row flex-wrap gap-2">
+          {BUSINESS_TYPE_ORDER.map((option) => {
+            const active = businessType === option;
+
+            return (
+              <Pressable
+                key={option}
+                accessibilityRole="radio"
+                accessibilityState={{ selected: active }}
+                disabled={isSubmitting}
+                onPress={() => setValue("businessType", option, { shouldDirty: true })}
+                className={cn(
+                  "rounded-full border px-3.5 py-2",
+                  active ? "border-brand bg-brand-soft" : "border-border-default bg-surface",
+                )}
+              >
+                <Text
+                  className={cn(
+                    "font-sans text-[13px] font-semibold",
+                    active ? "text-brand" : "text-secondary",
+                  )}
+                >
+                  {BUSINESS_TYPES[option].label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      </Field>
+
       <ControlledInput
         control={control}
         name="description"
@@ -173,6 +245,42 @@ function ProfileSection({ restaurant }: { restaurant: RestaurantAdminDto }) {
         hint="What a rider would recognise from the road."
         editable={!isSubmitting}
       />
+      <Body muted className="text-[13px]">
+        Listed in {restaurant.zone.name}, {restaurant.city.name}. The map pin is set when you
+        register and changed by support.
+      </Body>
+
+      <Field label="Price range">
+        <View className="flex-row gap-2">
+          {(Object.keys(PRICE_LABELS) as PriceRange[]).map((option) => {
+            const active = priceRange === option;
+
+            return (
+              <Pressable
+                key={option}
+                accessibilityRole="radio"
+                accessibilityState={{ selected: active }}
+                disabled={isSubmitting}
+                onPress={() => setValue("priceRange", option, { shouldDirty: true })}
+                className={cn(
+                  "flex-1 items-center rounded-input border py-2.5",
+                  active ? "border-brand bg-brand-soft" : "border-border-default bg-surface",
+                )}
+              >
+                <Text
+                  className={cn(
+                    "font-sans text-[13px]",
+                    active ? "font-semibold text-brand" : "text-primary",
+                  )}
+                >
+                  {PRICE_LABELS[option]}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      </Field>
+
       <ControlledInput
         control={control}
         name="minOrderAmount"
@@ -188,6 +296,15 @@ function ProfileSection({ restaurant }: { restaurant: RestaurantAdminDto }) {
         required
         hint="Customers see this as the wait before a rider collects."
         keyboardType="number-pad"
+        editable={!isSubmitting}
+      />
+      <ControlledInput
+        control={control}
+        name="deliveryRadiusKm"
+        label="Delivery radius (km)"
+        required
+        hint="How far from your door you'll deliver."
+        keyboardType="decimal-pad"
         editable={!isSubmitting}
       />
 
@@ -663,5 +780,5 @@ function VendorSettings({ restaurant }: { restaurant: RestaurantAdminDto }) {
 }
 
 export default function Screen() {
-  return <VendorGate>{(restaurant) => <VendorSettings restaurant={restaurant} />}</VendorGate>;
+  return <VendorGate allowUnapproved>{(restaurant) => <VendorSettings restaurant={restaurant} />}</VendorGate>;
 }

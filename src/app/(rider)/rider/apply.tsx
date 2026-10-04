@@ -21,8 +21,14 @@ import {
   useUploadRiderDocument,
 } from "@/hooks/use-riders";
 import { ApiError } from "@/lib/api-client";
-import { cn } from "@/lib/utils";
-import { DriverDocumentType, DriverStatus, VehicleType } from "@/types/enums";
+import { cn, hasText } from "@/lib/utils";
+import {
+  DriverDocumentStatus,
+  DriverDocumentType,
+  DriverStatus,
+  VehicleType,
+} from "@/types/enums";
+import type { RiderDto } from "@/types/rider";
 
 /**
  * The rider's own application.
@@ -45,17 +51,49 @@ const VEHICLE_LABELS: Record<string, string> = {
   [VehicleType.ON_FOOT]: "On foot",
 };
 
-/** The documents an administrator needs to see, in the order they are asked for. */
-const DOCUMENTS: readonly { type: string; label: string; hint: string }[] = [
+/**
+ * Every document the API can ask for, in the order they are asked for.
+ *
+ * All five, not just the CNIC: which ones a rider owes depends on their vehicle
+ * and is the API's call (`missingDocuments`). A list shorter than the API's
+ * leaves a rider with nothing left to upload and an application that can never
+ * be approved.
+ */
+const DOCUMENTS: readonly {
+  type: DriverDocumentType;
+  label: string;
+  hint: string;
+  aspect: "square" | "wide";
+}[] = [
   {
     type: DriverDocumentType.CNIC_FRONT,
     label: "CNIC — front",
-    hint: "All four corners in frame, no glare.",
+    hint: "The photo side. All four corners in frame, no glare.",
+    aspect: "wide",
   },
   {
     type: DriverDocumentType.CNIC_BACK,
     label: "CNIC — back",
     hint: "The side with your address.",
+    aspect: "wide",
+  },
+  {
+    type: DriverDocumentType.DRIVING_LICENSE,
+    label: "Driving licence",
+    hint: "Needed for a motorcycle, car or rickshaw.",
+    aspect: "wide",
+  },
+  {
+    type: DriverDocumentType.VEHICLE_REGISTRATION,
+    label: "Vehicle registration",
+    hint: "The registration book for your vehicle.",
+    aspect: "wide",
+  },
+  {
+    type: DriverDocumentType.PROFILE_PHOTO,
+    label: "Profile photo",
+    hint: "A clear head shot — customers see this at the door.",
+    aspect: "square",
   },
 ];
 
@@ -256,13 +294,7 @@ function ApplicationForm({ onFiled }: { onFiled: () => void }) {
   );
 }
 
-function Documents({
-  missing,
-  status,
-}: {
-  missing: readonly string[];
-  status: string;
-}) {
+function Documents({ rider }: { rider: RiderDto }) {
   const uploadDocument = useUploadRiderDocument();
   const resubmit = useResubmitRiderApproval();
 
@@ -272,15 +304,15 @@ function Documents({
    * and hands over the URL, so this only has to do the second.
    */
   const attach = React.useCallback(
-    (type: string, url: string | null) => {
+    (type: DriverDocumentType, label: string, url: string | null) => {
       if (url === null) {
         return;
       }
 
       uploadDocument.mutate(
-        { type: type as never, fileUrl: url },
+        { type, fileUrl: url },
         {
-          onSuccess: () => toast.success("Document added"),
+          onSuccess: () => toast.success(`${label} uploaded`),
           onError: (error) =>
             toast.error(
               error instanceof ApiError ? error.message : "Couldn't attach that document.",
@@ -291,17 +323,38 @@ function Documents({
     [uploadDocument],
   );
 
+  const byType = new Map(rider.documents.map((entry) => [entry.type, entry]));
+
+  // Only what the API says is still outstanding, plus anything already
+  // uploaded — a bicycle rider is never asked for a licence.
+  const shown = DOCUMENTS.filter(
+    (document) => rider.missingDocuments.includes(document.type) || byType.has(document.type),
+  );
+
+  // `missingDocuments` counts *verified* documents, so one that is uploaded and
+  // waiting on an administrator is still in it. Those are not the rider's to
+  // fix; only these are.
+  const toUpload = shown.filter((document) => {
+    const existing = byType.get(document.type);
+
+    return existing === undefined || existing.status === DriverDocumentStatus.REJECTED;
+  });
+
   return (
     <View className="gap-4">
       <View className="gap-1">
         <Heading level={3}>Your documents</Heading>
         <Body muted className="text-[13px]">
-          An administrator checks these before you can go online.
+          {toUpload.length > 0
+            ? `Still needed from you: ${toUpload.map((document) => document.label).join(", ")}.`
+            : rider.missingDocuments.length > 0
+              ? "Everything is uploaded. An administrator is checking it — there is nothing more for you to do."
+              : "All your documents are verified."}
         </Body>
       </View>
 
-      {DOCUMENTS.map((document) => {
-        const outstanding = missing.includes(document.type);
+      {shown.map((document) => {
+        const existing = byType.get(document.type);
 
         return (
           <Card key={document.type} className="gap-2">
@@ -309,22 +362,34 @@ function Documents({
               <Text className="font-sans text-[14px] font-semibold text-primary">
                 {document.label}
               </Text>
-              <Badge tone={outstanding ? "warning" : "success"}>
-                {outstanding ? "Needed" : "On file"}
-              </Badge>
+              {existing === undefined ? (
+                <Badge tone="warning">Needed</Badge>
+              ) : existing.status === DriverDocumentStatus.VERIFIED ? (
+                <Badge tone="success">Verified</Badge>
+              ) : existing.status === DriverDocumentStatus.REJECTED ? (
+                <Badge tone="danger">Rejected</Badge>
+              ) : (
+                <Badge tone="brand">Under review</Badge>
+              )}
             </View>
 
+            {existing !== undefined && hasText(existing.rejectionReason) ? (
+              <Text className="rounded-input bg-danger-soft px-3 py-2 font-sans text-[13px] text-danger">
+                {existing.rejectionReason}
+              </Text>
+            ) : null}
+
             <ImageUploadField
-              label={document.label}
+              label={existing === undefined ? "Add a photo" : "Replace the photo"}
               folder="rider-documents"
               // Always null: this field is an uploader, not a viewer. The stored
               // document lives on the rider record and is deliberately not shown
               // back — a CNIC photo on screen in a public place is a hazard, and
               // the badge above already answers "did it arrive".
               value={null}
-              onChange={(url) => attach(document.type, url)}
+              onChange={(url) => attach(document.type, document.label, url)}
               hint={document.hint}
-              aspect="wide"
+              aspect={document.aspect}
             />
           </Card>
         );
@@ -334,7 +399,7 @@ function Documents({
         Resubmitting is only meaningful for a rejected application — a pending
         one is already in the queue, and pushing it again just resets its place.
       */}
-      {status === DriverStatus.REJECTED ? (
+      {rider.status === DriverStatus.REJECTED ? (
         <Button
           fullWidth
           loading={resubmit.isPending}
@@ -386,7 +451,7 @@ export default function RiderApplyScreen() {
         ) : profile.isError ? (
           <ErrorState error={profile.error} onRetry={() => void profile.refetch()} />
         ) : (
-          <Documents missing={profile.data.missingDocuments} status={profile.data.status} />
+          <Documents rider={profile.data} />
         )}
       </ScrollView>
     </View>

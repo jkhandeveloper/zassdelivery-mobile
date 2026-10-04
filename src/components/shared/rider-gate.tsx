@@ -9,7 +9,7 @@ import { ErrorState, LoadingState } from "@/components/ui/states";
 import { useRiderProfile } from "@/hooks/use-riders";
 import { ApiError } from "@/lib/api-client";
 import { hasText } from "@/lib/utils";
-import { DriverStatus } from "@/types/enums";
+import { DriverDocumentStatus, DriverStatus } from "@/types/enums";
 import type { RiderDto } from "@/types/rider";
 
 /**
@@ -78,7 +78,15 @@ export function RiderGate({
   const rider = profile.data;
 
   if (rider.status === DriverStatus.PENDING_APPROVAL) {
-    const missing = rider.missingDocuments;
+    // `missingDocuments` is "not yet verified", which covers two different
+    // situations: never uploaded (or rejected) is the rider's to fix, uploaded
+    // and awaiting review is not. Listing both as "needed from you" sends a
+    // rider back to upload documents that are already in.
+    const missing = rider.missingDocuments.filter((type) => {
+      const existing = rider.documents.find((entry) => entry.type === type);
+
+      return existing === undefined || existing.status === DriverDocumentStatus.REJECTED;
+    });
 
     return (
       <Screen scroll contentContainerClassName="justify-center gap-4">
@@ -100,10 +108,15 @@ export function RiderGate({
             </Button>
           </Card>
         ) : (
-          <Body muted>
-            Everything we need is on file. There is nothing for you to do — we will notify you
-            as soon as a decision is made.
-          </Body>
+          <>
+            <Body muted>
+              Everything we need is uploaded. There is nothing for you to do — we will notify
+              you as soon as a decision is made.
+            </Body>
+            <Button variant="outline" fullWidth onPress={() => router.push("/rider/apply")}>
+              View my documents
+            </Button>
+          </>
         )}
         <GateSignOut />
       </Screen>
