@@ -5,6 +5,7 @@ import {
   isReportingInBackground,
   requestLocationPermission,
   startBackgroundReporting,
+  startPresenceReporting,
   stopBackgroundReporting,
   watchInForeground,
   type LocationPermission,
@@ -162,4 +163,23 @@ export function useRiderLocationReporting(isOnRun: boolean): {
   }, [isOnRun, permission]);
 
   return { permission, request };
+}
+
+/**
+ * Tells dispatch where an online rider is while they wait for an offer.
+ *
+ * Separate from `useRiderLocationReporting` on purpose: that one follows a
+ * rider for a customer's map and needs background access; this one only has to
+ * answer "who is nearest this restaurant", runs once a minute, and only while
+ * the app is open. Without it a rider's position is never written before their
+ * first run, and dispatch ranks them behind every rider it can locate.
+ */
+export function useRiderPresence(isWaiting: boolean): void {
+  React.useEffect(() => {
+    if (!isWaiting) {
+      return;
+    }
+
+    return startPresenceReporting();
+  }, [isWaiting]);
 }

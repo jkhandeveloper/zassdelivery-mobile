@@ -3,6 +3,7 @@ import * as React from "react";
 import { FlatList, Pressable, Switch, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { AddDishSheet } from "@/components/shared/add-dish-sheet";
 import { VendorGate } from "@/components/shared/vendor-gate";
 import { Button } from "@/components/ui/button";
 import { Input, InputAction } from "@/components/ui/input";
@@ -30,9 +31,9 @@ import type { RestaurantAdminDto } from "@/types/restaurant";
  * the day. Adjusting stock by a delta is for a kitchen counting portions, where
  * the dish comes back on by itself once there is stock again.
  *
- * Authoring dishes is deliberately not here: variants, add-on groups and images
- * make a long form that belongs on a bigger screen. This screen is for running
- * a menu during service, not writing one.
+ * Adding a dish is here too, behind one button, because a vendor whose only
+ * device is this phone has no other way to get a menu at all. Sizes and add-on
+ * groups are the part that stays on the web — see `AddDishSheet`.
  */
 
 type StatusFilter = "all" | "available" | "unavailable";
@@ -200,6 +201,7 @@ function VendorMenu({ restaurant }: { restaurant: RestaurantAdminDto }) {
   const [searchInput, setSearchInput] = React.useState("");
   const [search, setSearch] = React.useState("");
   const [filter, setFilter] = React.useState<StatusFilter>("all");
+  const [adding, setAdding] = React.useState(false);
 
   // Debounced, so typing a dish name is one request rather than several.
   React.useEffect(() => {
@@ -233,7 +235,16 @@ function VendorMenu({ restaurant }: { restaurant: RestaurantAdminDto }) {
   return (
     <View className="flex-1 bg-canvas" style={{ paddingTop: insets.top }}>
       <View className="gap-3 px-4 pb-2 pt-2">
-        <Heading level={2}>Menu</Heading>
+        <View className="flex-row items-center justify-between gap-3">
+          <Heading level={2}>Menu</Heading>
+          <Button
+            size="sm"
+            icon={<Plus size={15} color="#04202B" />}
+            onPress={() => setAdding(true)}
+          >
+            Add dish
+          </Button>
+        </View>
 
         <Input
           value={searchInput}
@@ -311,15 +322,23 @@ function VendorMenu({ restaurant }: { restaurant: RestaurantAdminDto }) {
               description={
                 search !== ""
                   ? "Try a different search."
-                  : // Creating a dish needs variants, add-on groups and images —
-                    // a long form that belongs on a bigger screen. The app
-                    // deliberately covers running the menu, not authoring it.
-                    "Add your first dishes on the web dashboard, then run the menu from here."
+                  : "Your menu is empty. Add dishes and they'll show on your storefront."
+              }
+              action={
+                search === ""
+                  ? { label: "Add your first dish", onPress: () => setAdding(true) }
+                  : undefined
               }
             />
           }
         />
       )}
+
+      <AddDishSheet
+        restaurantId={restaurant.id}
+        visible={adding}
+        onClose={() => setAdding(false)}
+      />
     </View>
   );
 }

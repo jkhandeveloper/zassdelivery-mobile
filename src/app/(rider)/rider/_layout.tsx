@@ -2,10 +2,44 @@ import { Tabs } from "expo-router";
 import { Bike, HandCoins, LifeBuoy, Package } from "lucide-react-native";
 import * as React from "react";
 
+import { useAuth } from "@/components/providers";
 import { RoleGuard } from "@/components/shared/role-guard";
 import { TabDock } from "@/components/ui/tab-dock";
+import { useRiderPresence } from "@/hooks/use-rider-location";
+import { useRiderDeliveries, useRiderProfile } from "@/hooks/use-riders";
 import { useSceneStyle } from "@/lib/palette";
 import { UserRole } from "@/types/auth";
+import { AssignmentStatus, DriverAvailability, DriverStatus } from "@/types/enums";
+
+/**
+ * An online rider's position, reported from whichever rider screen is open.
+ *
+ * Here rather than on the dashboard because a rider waiting for work is as
+ * likely to be looking at their cash or a past delivery, and dispatch needs to
+ * know where they are either way. Tracking *during* a run is a different job
+ * with its own permissions and stays with the dashboard.
+ *
+ * Renders nothing, and never prompts — the dashboard asks when going online.
+ */
+function RiderPresenceReporter() {
+  const { user, isReady, isAuthenticated } = useAuth();
+  const isRider = isReady && isAuthenticated && user?.role === UserRole.RIDER;
+
+  const profile = useRiderProfile(isRider);
+  const rider = profile.data ?? null;
+
+  const working =
+    rider !== null &&
+    rider.status === DriverStatus.ACTIVE &&
+    rider.availability !== DriverAvailability.OFFLINE;
+
+  const active = useRiderDeliveries({ status: AssignmentStatus.ACCEPTED, limit: 1 }, working);
+  const onRun = working && (active.data?.items.length ?? 0) > 0;
+
+  useRiderPresence(working && !onRun);
+
+  return null;
+}
 
 /**
  * The rider portal.
@@ -23,6 +57,7 @@ export default function RiderLayout() {
   const sceneStyle = useSceneStyle();
   return (
     <RoleGuard allow={[UserRole.RIDER]}>
+      <RiderPresenceReporter />
       <Tabs
         tabBar={(props) => <TabDock {...props} />}
         screenOptions={{ headerShown: false, sceneStyle }}

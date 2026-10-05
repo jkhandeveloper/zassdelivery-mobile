@@ -20,6 +20,7 @@ import {
   useSetAvailability,
 } from "@/hooks/use-riders";
 import { ApiError } from "@/lib/api-client";
+import { currentRiderCoordinates, requestForegroundLocation } from "@/lib/rider-location";
 import { formatPrice } from "@/lib/utils";
 import { AssignmentStatus, DriverAvailability } from "@/types/enums";
 import type { RiderDto } from "@/types/rider";
@@ -176,17 +177,53 @@ function RiderDashboard({ rider }: { rider: RiderDto }) {
     ),
   );
 
+  // Covers the wait for a position as well as the request, so the switch
+  // cannot be tapped twice while the first tap is still finding the rider.
+  const [goingOnline, setGoingOnline] = React.useState(false);
+
+  /**
+   * Going online sends the rider's position with the request.
+   *
+   * Dispatch ranks riders by distance to the restaurant, and one it cannot
+   * locate is offered a run only after every rider it can. So this is worth a
+   * permission prompt — but not worth blocking on: a rider who declines, or
+   * whose phone cannot get a fix, still goes online and is told what it costs.
+   */
   const onToggleOnline = React.useCallback(
-    (next: boolean) => {
-      setAvailability.mutate(
-        { availability: next ? DriverAvailability.ONLINE : DriverAvailability.OFFLINE },
-        {
-          onError: (error) =>
-            toast.error(
-              error instanceof ApiError ? error.message : "Couldn't change your availability.",
-            ),
-        },
-      );
+    async (next: boolean) => {
+      const onError = (error: unknown) =>
+        toast.error(
+          error instanceof ApiError ? error.message : "Couldn't change your availability.",
+        );
+
+      if (!next) {
+        setAvailability.mutate({ availability: DriverAvailability.OFFLINE }, { onError });
+        return;
+      }
+
+      setGoingOnline(true);
+
+      try {
+        const allowed = await requestForegroundLocation();
+        const coordinates = allowed ? await currentRiderCoordinates() : null;
+
+        await setAvailability.mutateAsync({
+          availability: DriverAvailability.ONLINE,
+          ...(coordinates !== null && coordinates),
+        });
+
+        if (coordinates === null) {
+          toast("You're online, but we can't see where you are", {
+            description: allowed
+              ? "Check that location is switched on — nearby riders are offered runs first."
+              : "Allow location for this app — nearby riders are offered runs first.",
+          });
+        }
+      } catch (error) {
+        onError(error);
+      } finally {
+        setGoingOnline(false);
+      }
     },
     [setAvailability],
   );
@@ -236,8 +273,8 @@ function RiderDashboard({ rider }: { rider: RiderDto }) {
             isOnline={isOnline}
             onDelivery={rider.availability === DriverAvailability.ON_DELIVERY}
             disabled={!rider.canGoOnline}
-            pending={setAvailability.isPending}
-            onToggle={onToggleOnline}
+            pending={setAvailability.isPending || goingOnline}
+            onToggle={(next) => void onToggleOnline(next)}
           />
 
           <View className="mt-3 flex-row gap-2">

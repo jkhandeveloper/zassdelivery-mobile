@@ -14,6 +14,7 @@ import { Field } from "@/components/ui/input";
 import { Badge, Body, Card, Heading } from "@/components/ui/primitives";
 import { ErrorState, LoadingState } from "@/components/ui/states";
 import { toast } from "@/components/ui/toast";
+import { useZones } from "@/hooks/use-geo";
 import {
   useRegisterRider,
   useResubmitRiderApproval,
@@ -125,6 +126,10 @@ type ApplyValues = z.infer<typeof applySchema>;
 
 function ApplicationForm({ onFiled }: { onFiled: () => void }) {
   const registerRider = useRegisterRider();
+  const zones = useZones();
+
+  // Outside the form schema: it is a tap on a chip, not text to validate.
+  const [zoneId, setZoneId] = React.useState<string | null>(null);
 
   const {
     control,
@@ -159,6 +164,7 @@ function ApplicationForm({ onFiled }: { onFiled: () => void }) {
       await registerRider.mutateAsync({
         cnic: values.cnic.replace(/[\s-]/g, ""),
         ...(values.licenseNumber !== "" && { licenseNumber: values.licenseNumber }),
+        ...(zoneId !== null && { zoneId }),
         vehicle: {
           type: values.vehicleType,
           ...(needsPlate && values.plateNumber !== "" && { plateNumber: values.plateNumber }),
@@ -199,6 +205,43 @@ function ApplicationForm({ onFiled }: { onFiled: () => void }) {
         autoCorrect={false}
         editable={!isSubmitting}
       />
+
+      {/*
+        Not required, but not decoration either: dispatch prefers a rider based
+        in the order's own zone, so one with no zone is offered runs after the
+        riders who have one.
+      */}
+      {(zones.data ?? []).length > 0 ? (
+        <Field label="Where will you be based?" hint="You're offered runs in your own area first.">
+          <View className="flex-row flex-wrap gap-2">
+            {(zones.data ?? []).map((zone) => {
+              const active = zoneId === zone.id;
+
+              return (
+                <Pressable
+                  key={zone.id}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected: active }}
+                  onPress={() => setZoneId(active ? null : zone.id)}
+                  className={cn(
+                    "rounded-full border px-3.5 py-2",
+                    active ? "border-brand bg-brand-soft" : "border-border-default bg-surface",
+                  )}
+                >
+                  <Text
+                    className={cn(
+                      "font-sans text-[13px] font-semibold",
+                      active ? "text-brand" : "text-secondary",
+                    )}
+                  >
+                    {zone.name}, {zone.city.name}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </Field>
+      ) : null}
 
       <Field label="What do you deliver on?" required>
         <View className="gap-2">

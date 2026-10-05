@@ -106,6 +106,93 @@ export async function requestLocationPermission(): Promise<LocationPermission> {
   return background.granted ? "granted" : "foreground-only";
 }
 
+/**
+ * Asks for location while the app is open, and nothing more.
+ *
+ * What going online needs. Dispatch ranks riders by distance to the restaurant,
+ * so a rider it cannot locate is offered a run only after everyone it can —
+ * which in practice means never. "All the time" access is a bigger ask and is
+ * left until there is a run to track.
+ */
+export async function requestForegroundLocation(): Promise<boolean> {
+  try {
+    return (await Location.requestForegroundPermissionsAsync()).granted;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Where the rider is right now, or null when that cannot be had quickly.
+ *
+ * Never prompts, and never waits long: this runs on the way to going online and
+ * on a timer afterwards, and neither is worth holding up for a GPS fix indoors.
+ * A recent last-known position is taken first because it is instant.
+ */
+export async function currentRiderCoordinates(): Promise<{
+  latitude: number;
+  longitude: number;
+} | null> {
+  try {
+    if (!(await Location.getForegroundPermissionsAsync()).granted) {
+      return null;
+    }
+
+    const position =
+      (await Location.getLastKnownPositionAsync({ maxAge: 60_000 })) ??
+      (await Promise.race([
+        Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }),
+        new Promise<null>((resolve) => setTimeout(() => resolve(null), 8_000)),
+      ]));
+
+    return position === null
+      ? null
+      : { latitude: position.coords.latitude, longitude: position.coords.longitude };
+  } catch {
+    return null;
+  }
+}
+
+/** How often an online rider with no run tells dispatch where they are. */
+const PRESENCE_INTERVAL_MS = 60_000;
+
+/**
+ * Keeps an online rider's position fresh while they wait for work.
+ *
+ * Over HTTP on a timer rather than the socket watcher used during a run, for
+ * two reasons. A rider waiting outside a restaurant is not moving, so a
+ * distance-filtered watcher never fires — and the API treats a position older
+ * than a few minutes as unknown. And once a minute is plenty for "which rider
+ * is nearest"; it is the customer's map during a run that needs every fix.
+ *
+ * Returns its own stop function.
+ */
+export function startPresenceReporting(): () => void {
+  let stopped = false;
+
+  const report = async () => {
+    const coordinates = await currentRiderCoordinates();
+
+    if (stopped || coordinates === null) {
+      return;
+    }
+
+    try {
+      await riderApi.updateLocation(coordinates);
+    } catch {
+      // Offline for a moment; the next tick is a minute away.
+    }
+  };
+
+  void report();
+  const timer = setInterval(() => void report(), PRESENCE_INTERVAL_MS);
+
+  return () => {
+    stopped = true;
+    clearInterval(timer);
+  };
+}
+
 /** Whether background reporting is currently running. */
 export async function isReportingInBackground(): Promise<boolean> {
   try {
