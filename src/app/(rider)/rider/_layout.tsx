@@ -1,12 +1,13 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { Tabs } from "expo-router";
 import { Bike, HandCoins, LifeBuoy, Package } from "lucide-react-native";
 import * as React from "react";
 
-import { useAuth } from "@/components/providers";
+import { useAuth, useRealtimeEvent } from "@/components/providers";
 import { RoleGuard } from "@/components/shared/role-guard";
 import { TabDock } from "@/components/ui/tab-dock";
 import { useRiderPresence } from "@/hooks/use-rider-location";
-import { useRiderDeliveries, useRiderProfile } from "@/hooks/use-riders";
+import { riderKeys, useRiderDeliveries, useRiderProfile } from "@/hooks/use-riders";
 import { useSceneStyle } from "@/lib/palette";
 import { UserRole } from "@/types/auth";
 import { AssignmentStatus, DriverAvailability, DriverStatus } from "@/types/enums";
@@ -42,6 +43,34 @@ function RiderPresenceReporter() {
 }
 
 /**
+ * Keeps the rider's screens current with what happens to them from elsewhere.
+ *
+ * `delivery:updated` is the API saying the run this rider holds moved on or
+ * ended — the kitchen marked it ready, the business or support closed it, or
+ * the rider confirmed it on another device. Nothing listened for any of that:
+ * the dashboard only refetched on a new offer, so after a delivery it could sit
+ * on "On a delivery" and the old earnings until it was pulled to refresh.
+ *
+ * Here rather than on the dashboard for the same reason as the presence
+ * reporter: whichever tab is open, the others should already be right.
+ * Everything under `riderKeys.all` is invalidated rather than one query
+ * patched, because a run ending changes the active run, the history, the
+ * rider's availability, the earnings and what they owe the business at once.
+ */
+function RiderLiveSync() {
+  const queryClient = useQueryClient();
+
+  useRealtimeEvent(
+    "delivery:updated",
+    React.useCallback(() => {
+      void queryClient.invalidateQueries({ queryKey: riderKeys.all });
+    }, [queryClient]),
+  );
+
+  return null;
+}
+
+/**
  * The rider portal.
  *
  * `RoleGuard` wraps the navigator rather than each screen, so a customer who
@@ -58,6 +87,7 @@ export default function RiderLayout() {
   return (
     <RoleGuard allow={[UserRole.RIDER]}>
       <RiderPresenceReporter />
+      <RiderLiveSync />
       <Tabs
         tabBar={(props) => <TabDock {...props} />}
         screenOptions={{ headerShown: false, sceneStyle }}
@@ -99,6 +129,8 @@ export default function RiderLayout() {
         */}
         <Tabs.Screen name="offers" options={{ href: null }} />
         <Tabs.Screen name="earnings" options={{ href: null }} />
+        {/* The rider's own account, reached from the dashboard hero. */}
+        <Tabs.Screen name="profile" options={{ href: null }} />
         {/* Reached from the gate when there is no approved rider yet. */}
         <Tabs.Screen name="apply" options={{ href: null }} />
       </Tabs>

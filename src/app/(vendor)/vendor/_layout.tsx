@@ -57,6 +57,8 @@ export default function VendorLayout() {
         <Tabs.Screen name="rider-cash" options={{ href: null }} />
         <Tabs.Screen name="staff" options={{ href: null }} />
         <Tabs.Screen name="support" options={{ href: null }} />
+        {/* The owner's own account, reached from the dashboard hero. */}
+        <Tabs.Screen name="profile" options={{ href: null }} />
         {/* Reached from the gate when the owner has no listing yet. */}
         <Tabs.Screen name="register" options={{ href: null }} />
       </Tabs>

@@ -15,6 +15,7 @@ export const ServerEvents = {
   riderLocation: "rider:location",
   riderAssigned: "rider:assigned",
   deliveryOffered: "delivery:offered",
+  deliveryUpdated: "delivery:updated",
   restaurantOrder: "restaurant:order",
   restaurantOrderUpdated: "restaurant:order-updated",
   notification: "notification:new",
@@ -107,6 +108,18 @@ export interface DeliveryOfferedPayload {
   expiresAt: string;
 }
 
+/**
+ * The run this rider holds moved on, or ended. A prompt to refetch rather than
+ * a copy of the run: the assignment, the rider's availability and their
+ * earnings all change together.
+ */
+export interface DeliveryUpdatedPayload {
+  orderId: string;
+  orderNumber: string;
+  status: string;
+  at: string;
+}
+
 export interface RestaurantOrderPayload {
   orderId: string;
   orderNumber: string;
@@ -153,6 +166,7 @@ export interface ServerToClientEvents {
   "rider:location": (payload: RiderLocationPayload) => void;
   "rider:assigned": (payload: RiderAssignedPayload) => void;
   "delivery:offered": (payload: DeliveryOfferedPayload) => void;
+  "delivery:updated": (payload: DeliveryUpdatedPayload) => void;
   "restaurant:order": (payload: RestaurantOrderPayload) => void;
   "restaurant:order-updated": (payload: RestaurantOrderPayload) => void;
   "notification:new": (payload: NotificationPayload) => void;

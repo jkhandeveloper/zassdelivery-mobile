@@ -1,4 +1,4 @@
-import { LogOut } from "lucide-react-native";
+import { LogOut, UserRound } from "lucide-react-native";
 import * as React from "react";
 import { Alert, Pressable } from "react-native";
 
@@ -36,6 +36,25 @@ export function HeroSignOut() {
       style={{ backgroundColor: "rgba(255,255,255,0.12)" }}
     >
       <LogOut size={20} color="#FFFFFF" />
+    </Pressable>
+  );
+}
+
+/**
+ * The way to the profile screen, beside sign-out in the same hero. The portals
+ * have no profile tab — their tabs are the work — so this is its front door.
+ */
+export function HeroProfileLink({ onPress }: { onPress: () => void }) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel="My profile"
+      hitSlop={8}
+      onPress={onPress}
+      className="h-11 w-11 items-center justify-center rounded-full"
+      style={{ backgroundColor: "rgba(255,255,255,0.12)" }}
+    >
+      <UserRound size={20} color="#FFFFFF" />
     </Pressable>
   );
 }

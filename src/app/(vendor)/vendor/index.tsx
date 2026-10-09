@@ -5,7 +5,7 @@ import { Pressable, RefreshControl, ScrollView, Text, View } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useAuth, useRestaurantRoom, useRealtimeEvent } from "@/components/providers";
-import { HeroSignOut } from "@/components/shared/hero-sign-out";
+import { HeroProfileLink, HeroSignOut } from "@/components/shared/hero-sign-out";
 import { VendorGate } from "@/components/shared/vendor-gate";
 import { Button } from "@/components/ui/button";
 import { HeroBackdrop, useLightStatusBar } from "@/components/ui/hero-backdrop";
@@ -168,7 +168,10 @@ function VendorDashboard({ restaurant }: { restaurant: RestaurantAdminDto }) {
                 {restaurant.name}
               </Text>
             </View>
-            <HeroSignOut />
+            <View className="flex-row gap-2">
+              <HeroProfileLink onPress={() => router.push("/vendor/profile")} />
+              <HeroSignOut />
+            </View>
           </View>
 
           {/*

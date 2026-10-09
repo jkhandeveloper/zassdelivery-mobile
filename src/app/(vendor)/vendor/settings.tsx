@@ -1,7 +1,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
-import { ChevronRight, Trash2, Users } from "lucide-react-native";
+import { ChevronRight, Trash2, UserRound, Users } from "lucide-react-native";
 import * as React from "react";
 import { useForm } from "react-hook-form";
 import { Alert, Pressable, ScrollView, Switch, Text, View } from "react-native";
@@ -774,6 +774,19 @@ function VendorSettings({ restaurant }: { restaurant: RestaurantAdminDto }) {
             </Card>
           </>
         ) : null}
+
+        {/* The person rather than the listing: their own name and password. */}
+        <Card>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => router.push("/vendor/profile")}
+            className="flex-row items-center gap-3 py-1"
+          >
+            <UserRound size={18} color="#75909F" />
+            <Text className="flex-1 font-sans text-[15px] text-primary">My profile</Text>
+            <ChevronRight size={18} color="#75909F" />
+          </Pressable>
+        </Card>
       </ScrollView>
     </View>
   );

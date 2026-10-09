@@ -5,7 +5,7 @@ import { Pressable, RefreshControl, ScrollView, Text, View } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useRealtimeEvent } from "@/components/providers";
-import { HeroSignOut } from "@/components/shared/hero-sign-out";
+import { HeroProfileLink, HeroSignOut } from "@/components/shared/hero-sign-out";
 import { OfferCard } from "@/components/shared/offer-card";
 import { RiderGate } from "@/components/shared/rider-gate";
 import { Button } from "@/components/ui/button";
@@ -230,7 +230,10 @@ function RiderDashboard({ rider }: { rider: RiderDto }) {
 
   const liveOffers = offers.data?.items.filter((offer) => offer.isLive) ?? [];
 
-  const refreshing = summary.isRefetching || active.isRefetching;
+  // Only a pull the rider made spins the control. Reading `isRefetching` here
+  // would also spin it for every background refetch — and those now arrive on
+  // their own whenever a run moves on.
+  const [refreshing, setRefreshing] = React.useState(false);
 
   return (
     <View className="flex-1 bg-canvas">
@@ -240,9 +243,10 @@ function RiderDashboard({ rider }: { rider: RiderDto }) {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={() => {
-              void summary.refetch();
-              void active.refetch();
-              void offers.refetch();
+              setRefreshing(true);
+              void Promise.all([summary.refetch(), active.refetch(), offers.refetch()]).finally(
+                () => setRefreshing(false),
+              );
             }}
           />
         }
@@ -266,7 +270,10 @@ function RiderDashboard({ rider }: { rider: RiderDto }) {
                 Salaam, {rider.fullName.split(" ")[0]}
               </Text>
             </View>
-            <HeroSignOut />
+            <View className="flex-row gap-2">
+              <HeroProfileLink onPress={() => router.push("/rider/profile")} />
+              <HeroSignOut />
+            </View>
           </View>
 
           <ShiftToggle
