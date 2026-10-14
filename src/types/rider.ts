@@ -262,6 +262,18 @@ export interface ListEarningsQueryDto {
   to?: string
 }
 
+/** GET /riders/me/delivery-rates — what a run pays. The rider keeps it in full. */
+export interface DeliveryRatesDto {
+  /** Paid per kilometre between the business and the door. */
+  perKmFee: number
+  /** The least a run pays, however short. */
+  minFee: number
+  /** The most a run pays. */
+  maxFee: number
+  /** Orders further than this are not delivered. */
+  maxDistanceKm: number
+}
+
 export interface EarningsSummaryDto {
   today: number
   thisWeek: number

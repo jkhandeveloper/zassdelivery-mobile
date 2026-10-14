@@ -28,6 +28,7 @@ export const riderKeys = {
   delivery: (orderId: string) => [...riderKeys.all, "delivery", orderId] as const,
   earnings: (query: ListEarningsQueryDto) => [...riderKeys.all, "earnings", query] as const,
   earningsSummary: () => [...riderKeys.all, "earnings", "summary"] as const,
+  deliveryRates: () => [...riderKeys.all, "delivery-rates"] as const,
   settlements: () => [...riderKeys.all, "settlements"] as const,
   settlementEntries: (query: ListSettlementQueryDto) =>
     [...riderKeys.all, "settlements", "entries", query] as const,
@@ -238,6 +239,16 @@ export function useEarningsSummary(enabled = true) {
     queryFn: () => riderApi.getEarningsSummary(),
     enabled,
     staleTime: 60 * 1000,
+  });
+}
+
+/** The platform's per-km pricing. Settings change rarely; an hour is plenty fresh. */
+export function useDeliveryRates(enabled = true) {
+  return useQuery({
+    queryKey: riderKeys.deliveryRates(),
+    queryFn: () => riderApi.getDeliveryRates(),
+    enabled,
+    staleTime: 60 * 60 * 1000,
   });
 }
 

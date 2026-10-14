@@ -29,6 +29,7 @@ import type {
   AssignOrderDto,
   CancelAssignmentDto,
   RejectDocumentDto,
+  DeliveryRatesDto,
 } from '@/types/rider'
 import type { SetPaymentQrCodesDto } from '@/types/payment'
 
@@ -38,6 +39,9 @@ export const riderApi = {
     apiPost<RiderDto>('/riders/register', data),
 
   getRiderProfile: () => apiGet<RiderDto>('/riders/me'),
+
+  /** The per-km rate, minimum, maximum and furthest distance a run is priced on. */
+  getDeliveryRates: () => apiGet<DeliveryRatesDto>('/riders/me/delivery-rates'),
 
   updateRiderProfile: (data: UpdateRiderDto) =>
     apiPatch<RiderDto>('/riders/me', data),

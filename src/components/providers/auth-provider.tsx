@@ -2,8 +2,14 @@ import { useQueryClient } from "@tanstack/react-query";
 import { usePathname, useRouter } from "expo-router";
 import * as React from "react";
 
-import { authApi, type LoginPayload, type RegisterPayload } from "@/lib/api/auth";
+import {
+  authApi,
+  type LoginPayload,
+  type OtpLoginPayload,
+  type RegisterPayload,
+} from "@/lib/api/auth";
 import { setSessionLostHandler } from "@/lib/api-client";
+import { unregisterFromPush } from "@/lib/push";
 import { disconnectSocket } from "@/lib/socket";
 import { useAuthStore } from "@/store/auth-store";
 import { homeRouteForRole, type AuthUser } from "@/types/auth";
@@ -28,6 +34,8 @@ interface AuthContextValue {
   /** False until the persisted session has been read back and revalidated. */
   isReady: boolean;
   login: (payload: LoginPayload) => Promise<AuthUser>;
+  /** Signs in with a texted code instead of a password. */
+  loginWithOtp: (payload: OtpLoginPayload) => Promise<AuthUser>;
   register: (payload: RegisterPayload) => Promise<AuthUser>;
   logout: (options?: { allDevices?: boolean }) => Promise<void>;
   /** Re-reads GET /auth/me — call after anything that can change permissions. */
@@ -161,6 +169,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     [queryClient],
   );
 
+  const loginWithOtp = React.useCallback(
+    async (payload: OtpLoginPayload) => {
+      const result = await authApi.loginWithOtp(payload);
+      useAuthStore.getState().setSession(result.user, result.tokens);
+      setRevalidatedFor(result.user.id);
+      queryClient.clear();
+
+      return result.user;
+    },
+    [queryClient],
+  );
+
   const register = React.useCallback(
     async (payload: RegisterPayload) => {
       const result = await authApi.register(payload);
@@ -176,6 +196,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = React.useCallback(
     async (options?: { allDevices?: boolean }) => {
       const refreshToken = useAuthStore.getState().tokens?.refreshToken;
+
+      // MOBILE: before the session goes, while the call can still be
+      // authenticated — otherwise this phone keeps receiving the pushes of an
+      // account that has signed out of it.
+      await unregisterFromPush();
 
       try {
         await authApi.logout({
@@ -226,12 +251,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       isAuthenticated: user !== null && tokens !== null,
       isReady,
       login,
+      loginWithOtp,
       register,
       logout,
       refreshUser,
       hasPermission,
     }),
-    [user, tokens, isReady, login, register, logout, refreshUser, hasPermission],
+    [user, tokens, isReady, login, loginWithOtp, register, logout, refreshUser, hasPermission],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

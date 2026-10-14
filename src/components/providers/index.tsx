@@ -4,6 +4,7 @@ import { Toaster } from "@/components/ui/toast";
 
 import { AuthProvider } from "./auth-provider";
 import { NotificationListener } from "./notification-listener";
+import { PushRegistrar } from "./push-registrar";
 import { QueryProvider } from "./query-provider";
 import { RealtimeProvider } from "./realtime-provider";
 import { ThemeProvider } from "./theme-provider";
@@ -22,6 +23,7 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
         <AuthProvider>
           <RealtimeProvider>
             <NotificationListener />
+            <PushRegistrar />
             {children}
             <Toaster />
           </RealtimeProvider>

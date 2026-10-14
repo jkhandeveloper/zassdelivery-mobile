@@ -75,6 +75,18 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # Firebase's Android config, which is what makes push work in the APK.
+      # Stored base64-encoded as the GOOGLE_SERVICES_JSON_BASE64 secret; a
+      # copy committed at the project root is used as-is. With neither, the
+      # APK still builds — without push.
+      - name: Add Firebase config
+        env:
+          GOOGLE_SERVICES_JSON_BASE64: ${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}
+        run: |
+          if [ -n "$GOOGLE_SERVICES_JSON_BASE64" ]; then
+            echo "$GOOGLE_SERVICES_JSON_BASE64" | base64 -d > google-services.json
+          fi
+
       - name: Build APK
         env:
           EAS_PROJECT_ID: ${{ vars.EAS_PROJECT_ID }}

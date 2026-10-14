@@ -11,8 +11,10 @@ import { Button } from "@/components/ui/button";
 import { ControlledInput } from "@/components/ui/controlled-input";
 import { Field, InputAction } from "@/components/ui/input";
 import { AuthShell } from "@/components/shared/auth-shell";
+import { OtpCodeStep } from "@/components/shared/otp-code-step";
 import { Body } from "@/components/ui/primitives";
 import { toast } from "@/components/ui/toast";
+import { useOtpConfig, useSendOtp } from "@/hooks/use-otp";
 import { ApiError } from "@/lib/api-client";
 import { postLoginRoute, safeNextPath } from "@/lib/routes";
 import { cn } from "@/lib/utils";
@@ -70,6 +72,26 @@ const ROLE_OPTIONS: readonly {
   },
 ];
 
+/** What a failed sign-up should say. The API's own message is written for people. */
+function describeError(error: unknown): string {
+  return error instanceof ApiError
+    ? error.status === 409
+      ? "An account already exists with that phone number. Try signing in."
+      : error.status === 429
+        ? "Too many attempts. Wait a few minutes, then try again."
+        : error.message
+    : "Something went wrong. Please try again.";
+}
+
+/** The details already entered, waiting on the texted code. */
+interface PendingSignUp {
+  values: RegisterValues;
+  codeLength: number;
+  resendAfterSeconds: number;
+  /** Bumped on every resend, so the code step starts its wait over. */
+  sendCount: number;
+}
+
 export default function RegisterScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ next?: string }>();
@@ -101,33 +123,126 @@ export default function RegisterScreen() {
   // render, which the React Compiler cannot memoize safely.
   const selectedRole = useWatch({ control, name: "role" });
 
+  const otpConfig = useOtpConfig();
+  const sendOtp = useSendOtp();
+  const [pending, setPending] = React.useState<PendingSignUp | null>(null);
+  const [creating, setCreating] = React.useState(false);
+
+  const otpEnabled = otpConfig.data?.enabled === true;
+
+  const createAccount = async (values: RegisterValues, otpCode?: string) => {
+    const user = await registerAccount({
+      fullName: values.fullName,
+      phone: values.phone,
+      password: values.password,
+      ...(values.email !== "" && { email: values.email }),
+      role: values.role,
+      ...(otpCode !== undefined && { otpCode }),
+    });
+
+    toast.success(`Welcome, ${user.fullName.split(" ")[0]}`);
+    router.replace(postLoginRoute(user, nextPath));
+  };
+
+  /** Texts the code, then swaps the form for the code step. */
+  const requestCode = async (values: RegisterValues) => {
+    const settings = await sendOtp.mutateAsync({ phone: values.phone, purpose: "register" });
+
+    setPending((current) => ({
+      values,
+      codeLength: settings.codeLength,
+      resendAfterSeconds: settings.resendAfterSeconds,
+      sendCount: (current?.sendCount ?? 0) + 1,
+    }));
+  };
+
   const onSubmit = handleSubmit(async (values) => {
     setFormError(null);
 
     try {
-      const user = await registerAccount({
-        fullName: values.fullName,
-        phone: values.phone,
-        password: values.password,
-        ...(values.email !== "" && { email: values.email }),
-        role: values.role,
-      });
+      // Asked for again if it never loaded: guessing "off" would send a
+      // sign-up the API refuses, and guessing "on" would lock everyone out of
+      // a deployment that cannot text.
+      const config = otpConfig.data ?? (await otpConfig.refetch()).data;
 
-      toast.success(`Welcome, ${user.fullName.split(" ")[0]}`);
-      router.replace(postLoginRoute(user, nextPath));
+      if (config?.enabled === true) {
+        await requestCode(values);
+        return;
+      }
+
+      await createAccount(values);
     } catch (error) {
-      const message =
-        error instanceof ApiError
-          ? error.status === 409
-            ? "An account already exists with that phone number. Try signing in."
-            : error.status === 429
-              ? "Too many attempts. Wait a few minutes, then try again."
-              : error.message
-          : "Something went wrong. Please try again.";
-
-      setFormError(message);
+      setFormError(describeError(error));
     }
   });
+
+  const onSubmitCode = async (code: string) => {
+    if (pending === null) return;
+
+    setFormError(null);
+    setCreating(true);
+
+    try {
+      await createAccount(pending.values, code);
+    } catch (error) {
+      setFormError(describeError(error));
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const onResend = async () => {
+    if (pending === null) return;
+
+    setFormError(null);
+
+    try {
+      await requestCode(pending.values);
+      toast.success("We've sent you a new code.");
+    } catch (error) {
+      setFormError(describeError(error));
+    }
+  };
+
+  const errorBanner =
+    formError !== null ? (
+      <View
+        accessibilityRole="alert"
+        accessibilityLiveRegion="polite"
+        className="rounded-input border border-danger bg-danger-soft px-4 py-3"
+      >
+        <Text className="font-sans text-[14px] font-medium text-danger">{formError}</Text>
+      </View>
+    ) : null;
+
+  if (pending !== null) {
+    return (
+      <AuthShell
+        eyebrow="One last step"
+        title={"Confirm your\nnumber."}
+        subtitle="So riders and businesses can reach you, and so nobody can sign up as you."
+      >
+        <View className="gap-4">
+          {errorBanner}
+          <OtpCodeStep
+            key={pending.sendCount}
+            phone={pending.values.phone}
+            codeLength={pending.codeLength}
+            resendAfterSeconds={pending.resendAfterSeconds}
+            submitting={creating}
+            resending={sendOtp.isPending}
+            submitLabel="Verify and create account"
+            onSubmit={(code) => void onSubmitCode(code)}
+            onResend={() => void onResend()}
+            onChangeNumber={() => {
+              setFormError(null);
+              setPending(null);
+            }}
+          />
+        </View>
+      </AuthShell>
+    );
+  }
 
   return (
     <AuthShell
@@ -136,15 +251,7 @@ export default function RegisterScreen() {
       subtitle="One account, whichever side of the order you are on."
     >
       <View className="gap-4">
-        {formError !== null ? (
-          <View
-            accessibilityRole="alert"
-            accessibilityLiveRegion="polite"
-            className="rounded-input border border-danger bg-danger-soft px-4 py-3"
-          >
-            <Text className="font-sans text-[14px] font-medium text-danger">{formError}</Text>
-          </View>
-        ) : null}
+        {errorBanner}
 
         {/*
           Role is picked before anything is typed, because it changes what the
@@ -256,8 +363,14 @@ export default function RegisterScreen() {
         />
 
         <Button onPress={() => void onSubmit()} loading={isSubmitting} fullWidth size="lg">
-          Create account
+          {otpEnabled ? "Continue" : "Create account"}
         </Button>
+
+        {otpEnabled ? (
+          <Body muted className="text-[13px]">
+            We&apos;ll text a code to your number to confirm it&apos;s yours.
+          </Body>
+        ) : null}
 
         {/*
           Both onboarding flows live outside the guarded portals on purpose:

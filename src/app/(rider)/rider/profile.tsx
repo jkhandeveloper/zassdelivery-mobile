@@ -1,5 +1,5 @@
 import { useRouter } from "expo-router";
-import { ChevronRight, FileText, HandCoins, LifeBuoy } from "lucide-react-native";
+import { ChevronRight, FileText, HandCoins, LifeBuoy, Route } from "lucide-react-native";
 import * as React from "react";
 import { Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -12,9 +12,9 @@ import { Badge, Body, Card, Divider, Heading } from "@/components/ui/primitives"
 import { ErrorState, LoadingState } from "@/components/ui/states";
 import { toast } from "@/components/ui/toast";
 import { useZones } from "@/hooks/use-geo";
-import { useRiderProfile, useUpdateRiderProfile } from "@/hooks/use-riders";
+import { useDeliveryRates, useRiderProfile, useUpdateRiderProfile } from "@/hooks/use-riders";
 import { ApiError } from "@/lib/api-client";
-import { cn, formatDate, hasText } from "@/lib/utils";
+import { cn, formatDate, formatPrice, hasText } from "@/lib/utils";
 import { DriverDocumentStatus, DriverStatus } from "@/types/enums";
 import type { RiderDto } from "@/types/rider";
 
@@ -121,6 +121,67 @@ function Summary({ rider }: { rider: RiderDto }) {
         <Stat label="Deliveries" value={String(rider.totalDeliveries)} />
         <Stat label="Since" value={formatDate(rider.verifiedAt ?? rider.createdAt)} />
       </View>
+    </Card>
+  );
+}
+
+/**
+ * What a run pays, per kilometre.
+ *
+ * Every order's delivery fee is priced from these and the rider keeps it, so
+ * this is the rider's rate card. Set by the platform for everyone — shown
+ * here so nobody has to work it backwards from their earnings.
+ */
+function DeliveryRatesCard() {
+  const rates = useDeliveryRates();
+
+  if (rates.isPending) {
+    return (
+      <Card>
+        <LoadingState label="Loading your rates…" />
+      </Card>
+    );
+  }
+
+  if (rates.isError) {
+    return <ErrorState error={rates.error} onRetry={() => void rates.refetch()} />;
+  }
+
+  const { perKmFee, minFee, maxFee, maxDistanceKm } = rates.data;
+  const exampleKm = Math.min(2, maxDistanceKm);
+  const example = Math.min(Math.max(Math.round(exampleKm * perKmFee), minFee), maxFee);
+
+  return (
+    <Card className="gap-3">
+      <Text className="font-sans text-[15px] font-semibold text-primary">Delivery pay</Text>
+
+      <View className="flex-row items-center gap-3 rounded-input bg-brand-soft p-3">
+        <View className="h-10 w-10 items-center justify-center rounded-xl bg-surface">
+          <Route size={20} color="#0E7490" />
+        </View>
+        <View className="flex-1">
+          <Text
+            className="font-display text-[22px] font-extrabold text-primary"
+            style={{ fontVariant: ["tabular-nums"] }}
+          >
+            {formatPrice(perKmFee)} / km
+          </Text>
+          <Text className="font-sans text-[12px] text-secondary">
+            From the business to the customer
+          </Text>
+        </View>
+      </View>
+
+      <View className="flex-row gap-2">
+        <Stat label="Shortest run" value={formatPrice(minFee)} />
+        <Stat label="Longest run" value={formatPrice(maxFee)} />
+        <Stat label="Furthest" value={`${maxDistanceKm} km`} />
+      </View>
+
+      <Body muted className="text-[13px]">
+        Customers pay this as the delivery fee and you keep all of it, plus any tip. A{" "}
+        {exampleKm} km run pays {formatPrice(example)}.
+      </Body>
     </Card>
   );
 }
@@ -408,6 +469,8 @@ export default function Screen() {
         </Heading>
 
         {profile.data !== undefined ? <Summary rider={profile.data} /> : null}
+
+        {profile.data !== undefined ? <DeliveryRatesCard /> : null}
 
         <AccountDetailsCard />
 

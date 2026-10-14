@@ -1,5 +1,12 @@
 import type { ConfigContext, ExpoConfig } from "expo/config";
 
+// Plain JS, like the config plugin beside it: it reads the filesystem, and
+// this project carries no Node typings for app code to lean on.
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { googleServicesFile } = require("./plugins/google-services-file") as {
+  googleServicesFile: (packageName: string) => string | undefined;
+};
+
 /**
  * Dynamic app config.
  *
@@ -43,6 +50,13 @@ const ALLOW_CLEARTEXT = VARIANT !== "production";
  */
 const EAS_PROJECT_ID = process.env.EAS_PROJECT_ID || undefined;
 
+/**
+ * Firebase's Android config, which is what gives the app an FCM token to
+ * receive push with — or undefined, and the app builds with push switched off.
+ * See the helper for why it is checked against this variant's package.
+ */
+const GOOGLE_SERVICES_FILE = googleServicesFile(bundleId);
+
 /** Where the bundled typefaces come from; see the expo-font plugin below. */
 const FONTS = "./node_modules/@expo-google-fonts";
 
@@ -79,6 +93,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
 
   android: {
     package: bundleId,
+    ...(GOOGLE_SERVICES_FILE !== undefined && { googleServicesFile: GOOGLE_SERVICES_FILE }),
     adaptiveIcon: {
       backgroundColor: "#0A1622",
       foregroundImage: "./assets/images/android-icon-foreground.png",

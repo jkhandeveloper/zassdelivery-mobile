@@ -21,6 +21,29 @@ export interface RegisterPayload {
   email?: string;
   /** Defaults to CUSTOMER server-side. */
   role?: SelfServiceRole;
+  /** The six digits from `sendOtp({ purpose: "register" })`, when verification is on. */
+  otpCode?: string;
+}
+
+export type OtpPurpose = "register" | "login";
+
+/** GET /auth/otp/config — whether this deployment texts verification codes. */
+export interface OtpSettings {
+  enabled: boolean;
+  codeLength: number;
+  expiresInSeconds: number;
+  /** The wait before another code can be sent to the same number. */
+  resendAfterSeconds: number;
+}
+
+export interface SendOtpPayload {
+  phone: string;
+  purpose: OtpPurpose;
+}
+
+export interface OtpLoginPayload {
+  phone: string;
+  code: string;
 }
 
 export interface ChangePasswordPayload {
@@ -39,6 +62,17 @@ export const authApi = {
 
   register: (payload: RegisterPayload) =>
     apiPost<AuthResponse>("/auth/register", payload, anonymous),
+
+  /** Whether sign-up needs a texted code, and whether SMS sign-in is offered. */
+  otpConfig: () => apiGet<OtpSettings>("/auth/otp/config", anonymous),
+
+  /** Texts a six-digit code. One a minute per number, a few a day. */
+  sendOtp: (payload: SendOtpPayload) =>
+    apiPost<OtpSettings>("/auth/otp/send", payload, anonymous),
+
+  /** Signs in with a texted code instead of a password. */
+  loginWithOtp: (payload: OtpLoginPayload) =>
+    apiPost<AuthResponse>("/auth/login/otp", payload, anonymous),
 
   /** The source of truth for role and permissions (§3) — read fresh, not from the token. */
   me: () => apiGet<AuthUser>("/auth/me"),
