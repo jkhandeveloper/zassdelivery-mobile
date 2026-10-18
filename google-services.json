@@ -1,0 +1,67 @@
+{
+  "project_info": {
+    "project_number": "388836766302",
+    "project_id": "zass-deliver",
+    "storage_bucket": "zass-deliver.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:388836766302:android:228713db3f913e2629facf",
+        "android_client_info": {
+          "package_name": "com.zassdeliver.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCF_IdKuV_rV-UZ-Orm4cKYHRzQMYiTQw8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:388836766302:android:01e2537b22dd7acd29facf",
+        "android_client_info": {
+          "package_name": "com.zassdeliver.app.dev"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCF_IdKuV_rV-UZ-Orm4cKYHRzQMYiTQw8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:388836766302:android:9afa0d1f2548ae6829facf",
+        "android_client_info": {
+          "package_name": "com.zassdeliver.app.preview"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCF_IdKuV_rV-UZ-Orm4cKYHRzQMYiTQw8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
