@@ -1,22 +1,48 @@
 import { useRouter } from "expo-router";
-import { ChevronRight, FileText, HandCoins, LifeBuoy, Route } from "lucide-react-native";
+import {
+  ChevronRight,
+  FileText,
+  HandCoins,
+  LifeBuoy,
+  Route,
+} from "lucide-react-native";
 import * as React from "react";
-import { Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
+import {
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  Text,
+  View,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { AccountDetailsCard, ChangePasswordCard } from "@/components/shared/account-sections";
+import {
+  AccountDetailsCard,
+  ChangePasswordCard,
+} from "@/components/shared/account-sections";
 import { GateSignOut } from "@/components/shared/hero-sign-out";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/input";
-import { Badge, Body, Card, Divider, Heading } from "@/components/ui/primitives";
+import {
+  Badge,
+  Body,
+  Card,
+  Divider,
+  Heading,
+} from "@/components/ui/primitives";
 import { ErrorState, LoadingState } from "@/components/ui/states";
 import { toast } from "@/components/ui/toast";
 import { useZones } from "@/hooks/use-geo";
-import { useDeliveryRates, useRiderProfile, useUpdateRiderProfile } from "@/hooks/use-riders";
+import {
+  useDeliveryRates,
+  useRiderProfile,
+  useSetDeliveryRate,
+  useUpdateRiderProfile,
+} from "@/hooks/use-riders";
 import { ApiError } from "@/lib/api-client";
 import { cn, formatDate, formatPrice, hasText } from "@/lib/utils";
 import { DriverDocumentStatus, DriverStatus } from "@/types/enums";
-import type { RiderDto } from "@/types/rider";
+import type { DeliveryRatesDto, RiderDto } from "@/types/rider";
 
 /**
  * The rider's own account and rider record, in one place.
@@ -42,7 +68,10 @@ const DOCUMENT_LABELS: Record<string, string> = {
   PROFILE_PHOTO: "Profile photo",
 };
 
-const STATUS_TONES: Record<string, "success" | "warning" | "danger" | "neutral"> = {
+const STATUS_TONES: Record<
+  string,
+  "success" | "warning" | "danger" | "neutral"
+> = {
   [DriverStatus.ACTIVE]: "success",
   [DriverStatus.PENDING_APPROVAL]: "warning",
   [DriverStatus.REJECTED]: "danger",
@@ -60,7 +89,9 @@ function statusLabel(status: string): string {
 function Stat({ label, value }: { label: string; value: string }) {
   return (
     <View className="flex-1 rounded-input bg-surface-muted px-3 py-2.5">
-      <Text className="font-sans text-[12px] font-medium text-muted">{label}</Text>
+      <Text className="font-sans text-[12px] font-medium text-muted">
+        {label}
+      </Text>
       <Text
         numberOfLines={1}
         adjustsFontSizeToFit
@@ -107,19 +138,26 @@ function Summary({ rider }: { rider: RiderDto }) {
             {rider.zoneName ?? "No home zone set"}
           </Text>
         </View>
-        <Badge tone={STATUS_TONES[rider.status] ?? "neutral"}>{statusLabel(rider.status)}</Badge>
+        <Badge tone={STATUS_TONES[rider.status] ?? "neutral"}>
+          {statusLabel(rider.status)}
+        </Badge>
       </View>
 
       {rider.status !== DriverStatus.ACTIVE ? (
         <Body muted className="text-[13px]">
-          {hasText(rider.rejectionReason) ? rider.rejectionReason : rider.statusText}
+          {hasText(rider.rejectionReason)
+            ? rider.rejectionReason
+            : rider.statusText}
         </Body>
       ) : null}
 
       <View className="flex-row gap-2">
         <Stat label="Rating" value={rider.rating.toFixed(1)} />
         <Stat label="Deliveries" value={String(rider.totalDeliveries)} />
-        <Stat label="Since" value={formatDate(rider.verifiedAt ?? rider.createdAt)} />
+        <Stat
+          label="Since"
+          value={formatDate(rider.verifiedAt ?? rider.createdAt)}
+        />
       </View>
     </Card>
   );
@@ -144,16 +182,23 @@ function DeliveryRatesCard() {
   }
 
   if (rates.isError) {
-    return <ErrorState error={rates.error} onRetry={() => void rates.refetch()} />;
+    return (
+      <ErrorState error={rates.error} onRetry={() => void rates.refetch()} />
+    );
   }
 
   const { perKmFee, minFee, maxFee, maxDistanceKm } = rates.data;
   const exampleKm = Math.min(2, maxDistanceKm);
-  const example = Math.min(Math.max(Math.round(exampleKm * perKmFee), minFee), maxFee);
+  const example = Math.min(
+    Math.max(Math.round(exampleKm * perKmFee), minFee),
+    maxFee,
+  );
 
   return (
     <Card className="gap-3">
-      <Text className="font-sans text-[15px] font-semibold text-primary">Delivery pay</Text>
+      <Text className="font-sans text-[15px] font-semibold text-primary">
+        Delivery pay
+      </Text>
 
       <View className="flex-row items-center gap-3 rounded-input bg-brand-soft p-3">
         <View className="h-10 w-10 items-center justify-center rounded-xl bg-surface">
@@ -179,10 +224,101 @@ function DeliveryRatesCard() {
       </View>
 
       <Body muted className="text-[13px]">
-        Customers pay this as the delivery fee and you keep all of it, plus any tip. A{" "}
-        {exampleKm} km run pays {formatPrice(example)}.
+        Customers pay this as the delivery fee and you keep all of it, plus any
+        tip. At the standard rate a {exampleKm} km run pays{" "}
+        {formatPrice(example)}.
       </Body>
+
+      <Divider />
+      <MyRateForm
+        key={rates.data.myPerKmRate ?? "standard"}
+        rates={rates.data}
+      />
     </Card>
+  );
+}
+
+/**
+ * The rider's own per-km price. Customers see it next to the rider's name at
+ * checkout and choose freely between cheaper and dearer riders.
+ */
+function MyRateForm({ rates }: { rates: DeliveryRatesDto }) {
+  const setRate = useSetDeliveryRate();
+  const [value, setValue] = React.useState(
+    rates.myPerKmRate === null ? "" : String(rates.myPerKmRate),
+  );
+
+  const parsed = Number(value);
+  const valid =
+    value.trim() !== "" &&
+    Number.isFinite(parsed) &&
+    parsed >= rates.riderRateMin &&
+    parsed <= rates.riderRateMax;
+
+  const save = (perKmRate: number | null) =>
+    setRate.mutate(
+      { perKmRate },
+      {
+        onSuccess: () =>
+          toast.success(
+            perKmRate === null
+              ? "You're back on the standard rate"
+              : `Your rate is now ${formatPrice(perKmRate)} per km`,
+          ),
+        onError: (error) =>
+          toast.error(
+            error instanceof ApiError
+              ? error.message
+              : "Couldn't save your rate.",
+          ),
+      },
+    );
+
+  return (
+    <View className="gap-2">
+      <Text className="font-sans text-[15px] font-semibold text-primary">
+        My rate
+      </Text>
+      <Body muted className="text-[13px]">
+        {rates.myPerKmRate === null
+          ? "You charge the standard rate."
+          : `You charge ${formatPrice(rates.myPerKmRate)} per km.`}{" "}
+        Set your own price and customers see it when they choose a rider. A run
+        costs the shortest-run price or more, with no upper cap. Applies to new
+        orders.
+      </Body>
+      <Field
+        label="Price per km (PKR)"
+        hint={`Between ${formatPrice(rates.riderRateMin)} and ${formatPrice(rates.riderRateMax)}`}
+      >
+        <Input
+          value={value}
+          onChangeText={setValue}
+          keyboardType="decimal-pad"
+          placeholder={String(rates.perKmFee)}
+        />
+      </Field>
+      <View className="flex-row gap-2">
+        <Button
+          className="flex-1"
+          loading={setRate.isPending}
+          disabled={!valid}
+          onPress={() => save(parsed)}
+        >
+          Save rate
+        </Button>
+        {rates.myPerKmRate !== null ? (
+          <Button
+            variant="outline"
+            className="flex-1"
+            disabled={setRate.isPending}
+            onPress={() => save(null)}
+          >
+            Use standard
+          </Button>
+        ) : null}
+      </View>
+    </View>
   );
 }
 
@@ -191,10 +327,14 @@ function RiderDetailsCard({ rider }: { rider: RiderDto }) {
   const update = useUpdateRiderProfile();
   const zones = useZones();
 
-  const [licenseNumber, setLicenseNumber] = React.useState(rider.licenseNumber ?? "");
+  const [licenseNumber, setLicenseNumber] = React.useState(
+    rider.licenseNumber ?? "",
+  );
   const [zoneId, setZoneId] = React.useState<string | null>(rider.zoneId);
   const [bankName, setBankName] = React.useState(rider.payout?.bankName ?? "");
-  const [accountTitle, setAccountTitle] = React.useState(rider.payout?.accountTitle ?? "");
+  const [accountTitle, setAccountTitle] = React.useState(
+    rider.payout?.accountTitle ?? "",
+  );
   // The stored number comes back masked, so it is never put in the field: saving
   // the mask back would overwrite the real number with dots.
   const [accountNumber, setAccountNumber] = React.useState("");
@@ -207,7 +347,9 @@ function RiderDetailsCard({ rider }: { rider: RiderDto }) {
         payout: {
           bankName: bankName.trim(),
           accountTitle: accountTitle.trim(),
-          ...(accountNumber.trim() !== "" && { accountNumber: accountNumber.trim() }),
+          ...(accountNumber.trim() !== "" && {
+            accountNumber: accountNumber.trim(),
+          }),
         },
       },
       {
@@ -217,14 +359,18 @@ function RiderDetailsCard({ rider }: { rider: RiderDto }) {
         },
         onError: (error) =>
           toast.error(
-            error instanceof ApiError ? error.message : "Couldn't save your rider details.",
+            error instanceof ApiError
+              ? error.message
+              : "Couldn't save your rider details.",
           ),
       },
     );
 
   return (
     <Card className="gap-4">
-      <Text className="font-sans text-[15px] font-semibold text-primary">Rider details</Text>
+      <Text className="font-sans text-[15px] font-semibold text-primary">
+        Rider details
+      </Text>
 
       {/* What the approval was made against, so it is shown and not editable. */}
       <Field label="CNIC" hint="Contact support to change this.">
@@ -250,7 +396,10 @@ function RiderDetailsCard({ rider }: { rider: RiderDto }) {
       </Field>
 
       {(zones.data ?? []).length > 0 ? (
-        <Field label="Where you're based" hint="You're offered runs in your own area first.">
+        <Field
+          label="Where you're based"
+          hint="You're offered runs in your own area first."
+        >
           <View className="flex-row flex-wrap gap-2">
             {(zones.data ?? []).map((zone) => {
               const active = zoneId === zone.id;
@@ -264,7 +413,9 @@ function RiderDetailsCard({ rider }: { rider: RiderDto }) {
                   onPress={() => setZoneId(zone.id)}
                   className={cn(
                     "rounded-full border px-3.5 py-2",
-                    active ? "border-brand bg-brand-soft" : "border-border-default bg-surface",
+                    active
+                      ? "border-brand bg-brand-soft"
+                      : "border-border-default bg-surface",
                   )}
                 >
                   <Text
@@ -285,7 +436,9 @@ function RiderDetailsCard({ rider }: { rider: RiderDto }) {
       <Divider />
 
       <View className="gap-1">
-        <Text className="font-sans text-[15px] font-semibold text-primary">Bank details</Text>
+        <Text className="font-sans text-[15px] font-semibold text-primary">
+          Bank details
+        </Text>
         <Body muted className="text-[13px]">
           Where a business can send the delivery fees it owes you.
         </Body>
@@ -339,7 +492,9 @@ function VehicleCard({ rider }: { rider: RiderDto }) {
 
   return (
     <Card className="gap-2">
-      <Text className="font-sans text-[15px] font-semibold text-primary">Vehicle</Text>
+      <Text className="font-sans text-[15px] font-semibold text-primary">
+        Vehicle
+      </Text>
 
       {vehicles.length === 0 ? (
         <Body muted className="text-[13px]">
@@ -347,7 +502,12 @@ function VehicleCard({ rider }: { rider: RiderDto }) {
         </Body>
       ) : (
         vehicles.map((vehicle, index) => {
-          const model = [vehicle.make, vehicle.model, vehicle.year, vehicle.color]
+          const model = [
+            vehicle.make,
+            vehicle.model,
+            vehicle.year,
+            vehicle.color,
+          ]
             .filter((part) => part !== null && part !== "")
             .join(" · ");
 
@@ -360,7 +520,9 @@ function VehicleCard({ rider }: { rider: RiderDto }) {
                     {VEHICLE_LABELS[vehicle.type] ?? vehicle.type}
                   </Text>
                   {model !== "" ? (
-                    <Text className="font-sans text-[13px] text-secondary">{model}</Text>
+                    <Text className="font-sans text-[13px] text-secondary">
+                      {model}
+                    </Text>
                   ) : null}
                 </View>
                 {hasText(vehicle.plateNumber) ? (
@@ -386,7 +548,9 @@ function DocumentsCard({ rider }: { rider: RiderDto }) {
   return (
     <Card className="gap-2">
       <View className="flex-row items-center justify-between">
-        <Text className="font-sans text-[15px] font-semibold text-primary">Documents</Text>
+        <Text className="font-sans text-[15px] font-semibold text-primary">
+          Documents
+        </Text>
         <Button
           size="sm"
           variant="outline"
@@ -399,8 +563,8 @@ function DocumentsCard({ rider }: { rider: RiderDto }) {
 
       {rider.documents.length === 0 ? (
         <Body muted className="text-[13px]">
-          Nothing uploaded yet. Your application can&apos;t be approved until your documents are
-          in.
+          Nothing uploaded yet. Your application can&apos;t be approved until
+          your documents are in.
         </Body>
       ) : (
         rider.documents.map((document, index) => (
@@ -415,10 +579,13 @@ function DocumentsCard({ rider }: { rider: RiderDto }) {
                   <Text
                     className={cn(
                       "font-sans text-[12px]",
-                      document.isExpired ? "font-semibold text-danger" : "text-muted",
+                      document.isExpired
+                        ? "font-semibold text-danger"
+                        : "text-muted",
                     )}
                   >
-                    {document.isExpired ? "Expired" : "Expires"} {formatDate(document.expiresAt)}
+                    {document.isExpired ? "Expired" : "Expires"}{" "}
+                    {formatDate(document.expiresAt)}
                   </Text>
                 ) : null}
                 {hasText(document.rejectionReason) ? (
@@ -429,7 +596,9 @@ function DocumentsCard({ rider }: { rider: RiderDto }) {
               </View>
               <Badge
                 tone={
-                  document.isExpired ? "danger" : (STATUS_TONES[document.status] ?? "danger")
+                  document.isExpired
+                    ? "danger"
+                    : (STATUS_TONES[document.status] ?? "danger")
                 }
               >
                 {document.isExpired ? "Expired" : statusLabel(document.status)}
@@ -450,7 +619,9 @@ export default function Screen() {
   // A 404 is "signed in as a rider, but never filed the application": the
   // account half of this screen still applies, the rider half does not exist yet.
   const notRegistered =
-    profile.isError && profile.error instanceof ApiError && profile.error.status === 404;
+    profile.isError &&
+    profile.error instanceof ApiError &&
+    profile.error.status === 404;
 
   return (
     <View className="flex-1 bg-canvas" style={{ paddingTop: insets.top }}>
@@ -482,13 +653,18 @@ export default function Screen() {
               Finish your rider application
             </Text>
             <Body muted className="text-[13px]">
-              Your account is ready, but we still need your CNIC, vehicle and documents before
-              you can take deliveries.
+              Your account is ready, but we still need your CNIC, vehicle and
+              documents before you can take deliveries.
             </Body>
-            <Button onPress={() => router.push("/rider/apply")}>Start your application</Button>
+            <Button onPress={() => router.push("/rider/apply")}>
+              Start your application
+            </Button>
           </Card>
         ) : profile.isError ? (
-          <ErrorState error={profile.error} onRetry={() => void profile.refetch()} />
+          <ErrorState
+            error={profile.error}
+            onRetry={() => void profile.refetch()}
+          />
         ) : (
           <>
             {/* Keyed on the rider, so the fields are seeded once from what

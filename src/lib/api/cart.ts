@@ -7,6 +7,9 @@ import type {
   ApplyCouponDto,
   SetCartAddressDto,
   SetTipDto,
+  CartRiderOptionDto,
+  SetCartRiderDto,
+  SetFulfilmentDto,
 } from '@/types/cart'
 
 type Cart = CartDto | EmptyCartDto
@@ -30,6 +33,12 @@ export const cartApi = {
   setDeliveryAddress: (data: SetCartAddressDto) => apiPatch<Cart>('/cart/address', data),
 
   setTip: (data: SetTipDto) => apiPatch<Cart>('/cart/tip', data),
+
+  setFulfilment: (data: SetFulfilmentDto) => apiPatch<Cart>('/cart/fulfilment', data),
+
+  getRiders: () => apiGet<CartRiderOptionDto[]>('/cart/riders'),
+
+  setRider: (data: SetCartRiderDto) => apiPatch<Cart>('/cart/rider', data),
 
   validateCart: () => apiPost<Cart>('/cart/validate', {}),
 }

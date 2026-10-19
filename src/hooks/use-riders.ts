@@ -14,6 +14,7 @@ import type {
   RegisterRiderDto,
   RejectOfferDto,
   SetAvailabilityDto,
+  SetDeliveryRateDto,
   UpdateRiderDto,
   UploadDocumentDto,
 } from "@/types/rider";
@@ -249,6 +250,19 @@ export function useDeliveryRates(enabled = true) {
     queryFn: () => riderApi.getDeliveryRates(),
     enabled,
     staleTime: 60 * 60 * 1000,
+  });
+}
+
+/** Sets the rider's own per-km rate, refreshing the rates and the profile. */
+export function useSetDeliveryRate() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: SetDeliveryRateDto) => riderApi.setDeliveryRate(data),
+    onSuccess: (rider) => {
+      queryClient.setQueryData(riderKeys.profile(), rider);
+      void queryClient.invalidateQueries({ queryKey: riderKeys.deliveryRates() });
+    },
   });
 }
 

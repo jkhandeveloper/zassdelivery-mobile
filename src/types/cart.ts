@@ -6,12 +6,18 @@
  * than one that costs a round trip.
  */
 
+import type { OrderType, VehicleType } from './enums'
+
 export interface CartDto {
   id: string
   restaurant: CartRestaurantDto
   items: CartLineDto[]
   totals: CartTotalsDto
   delivery: CartDeliveryDto
+  /** DELIVERY to the chosen address, or PICKUP: the customer collects it. */
+  fulfilment: OrderType
+  /** The rider the customer chose. Null lets dispatch pick one. */
+  rider: CartRiderDto | null
   couponCode: string | null
   notes: string | null
   issues: CartIssueDto[]
@@ -91,6 +97,36 @@ export interface CartDeliveryDto {
   distanceKm: number | null
   etaMinutes: number | null
   isDeliverable: boolean
+}
+
+export interface CartRiderDto {
+  id: string
+  fullName: string
+  avatarUrl: string | null
+  rating: number
+  vehicleType: VehicleType | null
+  /** The rider's own rate per kilometre. Null charges the platform rate. */
+  perKmRate: number | null
+}
+
+/** One rider on checkout's "choose your rider" list — GET /cart/riders. */
+export interface CartRiderOptionDto extends CartRiderDto {
+  ratingCount: number
+  totalDeliveries: number
+  /** How far the rider is from the business. */
+  distanceToPickupKm: number
+  /** Delivery to the cart's address with this rider; null without an address. */
+  deliveryFee: number | null
+  isSelected: boolean
+}
+
+export interface SetFulfilmentDto {
+  fulfilment: OrderType
+}
+
+export interface SetCartRiderDto {
+  /** Null lets dispatch pick the nearest rider at the platform rate. */
+  driverId: string | null
 }
 
 export interface CartIssueDto {

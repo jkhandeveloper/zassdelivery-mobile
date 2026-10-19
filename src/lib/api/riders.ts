@@ -30,6 +30,7 @@ import type {
   CancelAssignmentDto,
   RejectDocumentDto,
   DeliveryRatesDto,
+  SetDeliveryRateDto,
 } from '@/types/rider'
 import type { SetPaymentQrCodesDto } from '@/types/payment'
 
@@ -47,6 +48,9 @@ export const riderApi = {
     apiPatch<RiderDto>('/riders/me', data),
 
   /** Replaces the whole list; `[]` removes them. */
+  setDeliveryRate: (data: SetDeliveryRateDto) =>
+    apiPut<RiderDto>('/riders/me/delivery-rate', data),
+
   setPaymentQrCodes: (data: SetPaymentQrCodesDto) =>
     apiPut<RiderDto>('/riders/me/payment-qr-codes', data),
 

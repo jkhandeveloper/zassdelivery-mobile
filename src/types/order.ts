@@ -17,6 +17,8 @@ export interface OrderDto {
   type: OrderType
   restaurant: OrderPartyDto
   driver: OrderPartyDto | null
+  /** Who ordered — the person a business hands a pickup order to. */
+  customer: OrderPartyDto
   items: OrderItemDto[]
   totals: OrderTotalsDto
   paymentMethod: PaymentMethod
@@ -27,6 +29,8 @@ export interface OrderDto {
   deliveryAddress: string
   deliveryLandmark: string | null
   deliveryNotes: string | null
+  /** The customer's note for the business. */
+  customerNote: string | null
   distanceKm: number | null
   estimatedDeliveryAt: string | null
   placedAt: string | null

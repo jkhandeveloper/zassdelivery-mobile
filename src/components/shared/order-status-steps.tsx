@@ -67,13 +67,31 @@ const STEPS: readonly Step[] = [
   {
     key: "on-the-way",
     label: "On the way to you",
-    reachedBy: [OrderStatus.PICKED_UP, OrderStatus.ON_THE_WAY, OrderStatus.DELIVERED],
+    reachedBy: [
+      OrderStatus.PICKED_UP,
+      OrderStatus.ON_THE_WAY,
+      OrderStatus.DELIVERED,
+    ],
   },
   { key: "delivered", label: "Delivered", reachedBy: [OrderStatus.DELIVERED] },
 ];
 
+/** A pickup order never sees a rider: it is ready, then collected over the counter. */
+const PICKUP_STEPS: readonly Step[] = [
+  ...STEPS.slice(0, 3),
+  {
+    key: "ready",
+    label: "Ready to collect",
+    reachedBy: [OrderStatus.READY_FOR_PICKUP, OrderStatus.DELIVERED],
+  },
+  { key: "collected", label: "Collected", reachedBy: [OrderStatus.DELIVERED] },
+];
+
 /** The timeline entry that first reached a stage, for its timestamp. */
-function timeFor(step: Step, timeline: readonly OrderTimelineEntryDto[]): string | null {
+function timeFor(
+  step: Step,
+  timeline: readonly OrderTimelineEntryDto[],
+): string | null {
   const entry = timeline.find((item) => step.reachedBy.includes(item.toStatus));
 
   return entry?.at ?? null;
@@ -82,10 +100,15 @@ function timeFor(step: Step, timeline: readonly OrderTimelineEntryDto[]): string
 export function OrderStatusSteps({
   status,
   timeline,
+  pickup = false,
 }: {
   status: OrderStatus | null;
   timeline: readonly OrderTimelineEntryDto[];
+  /** Collected by the customer, so the rider stages do not apply. */
+  pickup?: boolean;
 }) {
+  const steps = pickup ? PICKUP_STEPS : STEPS;
+
   /**
    * A cancelled, rejected or failed order has left the happy path, and drawing
    * a five-stage progress bar for one is actively misleading — the stages it
@@ -106,12 +129,14 @@ export function OrderStatusSteps({
 
     return (
       <View className="rounded-card border border-danger bg-danger-soft px-4 py-3">
-        <Text className="font-sans text-[14px] font-semibold text-danger">{label}</Text>
+        <Text className="font-sans text-[14px] font-semibold text-danger">
+          {label}
+        </Text>
       </View>
     );
   }
 
-  const currentIndex = STEPS.reduce(
+  const currentIndex = steps.reduce(
     (highest, step, index) =>
       status !== null && step.reachedBy.includes(status) ? index : highest,
     -1,
@@ -119,11 +144,12 @@ export function OrderStatusSteps({
 
   return (
     <View accessibilityRole="progressbar" accessibilityLabel="Order progress">
-      {STEPS.map((step, index) => {
+      {steps.map((step, index) => {
         const done = index <= currentIndex;
         // The stage in progress right now, rather than one already finished.
-        const active = index === currentIndex + 1 && currentIndex < STEPS.length - 1;
-        const last = index === STEPS.length - 1;
+        const active =
+          index === currentIndex + 1 && currentIndex < steps.length - 1;
+        const last = index === steps.length - 1;
         const at = done ? timeFor(step, timeline) : null;
 
         return (
@@ -140,12 +166,18 @@ export function OrderStatusSteps({
                 }
               >
                 {done ? <Check size={14} color="#FFFFFF" /> : null}
-                {active ? <View className="h-2 w-2 rounded-full bg-brand" /> : null}
+                {active ? (
+                  <View className="h-2 w-2 rounded-full bg-brand" />
+                ) : null}
               </View>
 
               {!last ? (
                 <View
-                  className={done ? "w-0.5 flex-1 bg-success" : "w-0.5 flex-1 bg-border-default"}
+                  className={
+                    done
+                      ? "w-0.5 flex-1 bg-success"
+                      : "w-0.5 flex-1 bg-border-default"
+                  }
                 />
               ) : null}
             </View>

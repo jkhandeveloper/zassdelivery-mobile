@@ -1,14 +1,27 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { ChevronLeft, Phone, WifiOff } from "lucide-react-native";
+import { ChevronLeft, Phone, Store, WifiOff } from "lucide-react-native";
 import * as React from "react";
-import { Alert, Linking, Pressable, ScrollView, Text, View } from "react-native";
+import {
+  Alert,
+  Linking,
+  Pressable,
+  ScrollView,
+  Text,
+  View,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { RequireAuth } from "@/components/shared/role-guard";
 import { DeliveryMap } from "@/components/shared/delivery-map";
 import { OrderStatusSteps } from "@/components/shared/order-status-steps";
 import { Button } from "@/components/ui/button";
-import { Badge, Body, Card, Divider, Heading } from "@/components/ui/primitives";
+import {
+  Badge,
+  Body,
+  Card,
+  Divider,
+  Heading,
+} from "@/components/ui/primitives";
 import { ErrorState, LoadingState } from "@/components/ui/states";
 import { toast } from "@/components/ui/toast";
 import { useCancelOrder, useOrder } from "@/hooks/use-orders";
@@ -16,7 +29,7 @@ import { useOrderTracking } from "@/hooks/use-order-tracking";
 import { ApiError } from "@/lib/api-client";
 import { PAYMENT_METHOD_LABELS } from "@/lib/payment-labels";
 import { formatDateTime, formatPrice, hasText } from "@/lib/utils";
-import { OrderStatus } from "@/types/enums";
+import { OrderStatus, OrderType } from "@/types/enums";
 
 /**
  * Live order tracking.
@@ -96,7 +109,8 @@ function TrackingScreen() {
   // The socket is fresher, so it wins wherever both have an answer.
   const status = tracking.status ?? order.data?.status ?? null;
   const statusText = tracking.statusText ?? order.data?.statusText ?? null;
-  const estimatedDeliveryAt = tracking.estimatedDeliveryAt ?? order.data?.estimatedDeliveryAt ?? null;
+  const estimatedDeliveryAt =
+    tracking.estimatedDeliveryAt ?? order.data?.estimatedDeliveryAt ?? null;
 
   const eta = useEta(estimatedDeliveryAt);
 
@@ -159,10 +173,13 @@ function TrackingScreen() {
   }
 
   if (order.isError) {
-    return <ErrorState error={order.error} onRetry={() => void order.refetch()} />;
+    return (
+      <ErrorState error={order.error} onRetry={() => void order.refetch()} />
+    );
   }
 
   const data = order.data;
+  const pickup = data.type === OrderType.PICKUP;
 
   return (
     <View className="flex-1 bg-canvas" style={{ paddingTop: insets.top }}>
@@ -170,7 +187,9 @@ function TrackingScreen() {
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Go back"
-          onPress={() => (router.canGoBack() ? router.back() : router.replace("/orders"))}
+          onPress={() =>
+            router.canGoBack() ? router.back() : router.replace("/orders")
+          }
           hitSlop={8}
           className="h-10 w-10 items-center justify-center"
         >
@@ -219,16 +238,36 @@ function TrackingScreen() {
           ) : null}
 
           {status === OrderStatus.DELIVERED && data.deliveredAt !== null ? (
-            <Body muted>Delivered {formatDateTime(data.deliveredAt)}</Body>
+            <Body muted>
+              {pickup ? "Collected" : "Delivered"}{" "}
+              {formatDateTime(data.deliveredAt)}
+            </Body>
           ) : null}
         </View>
+
+        {pickup && !isFinished ? (
+          <View className="flex-row items-start gap-3 rounded-card border border-brand bg-brand-soft px-4 py-3">
+            <Store size={20} color="#0E7490" />
+            <View className="flex-1 gap-1">
+              <Text className="font-sans text-[15px] font-semibold text-primary">
+                {status === OrderStatus.READY_FOR_PICKUP
+                  ? `Ready — collect it from ${data.restaurant.name}`
+                  : `You'll collect this order from ${data.restaurant.name}`}
+              </Text>
+              <Body muted className="text-[13px]">
+                No rider is coming. Give your order number {data.orderNumber} at
+                the counter.
+              </Body>
+            </View>
+          </View>
+        ) : null}
 
         {/*
           The map is only worth its screen space while something is moving. A
           delivered order's last known rider position is noise, and a
           not-yet-confirmed order has no rider to show.
         */}
-        {!isFinished ? (
+        {!isFinished && !pickup ? (
           <DeliveryMap
             pickup={tracking.pickup}
             destination={tracking.destination}
@@ -280,7 +319,11 @@ function TrackingScreen() {
         ) : null}
 
         <Card>
-          <OrderStatusSteps status={status} timeline={data.timeline} />
+          <OrderStatusSteps
+            status={status}
+            timeline={data.timeline}
+            pickup={pickup}
+          />
         </Card>
 
         <Card className="gap-3">
@@ -297,17 +340,26 @@ function TrackingScreen() {
                 {item.quantity}×
               </Text>
               <View className="flex-1">
-                <Text className="font-sans text-[14px] text-primary">{item.name}</Text>
+                <Text className="font-sans text-[14px] text-primary">
+                  {item.name}
+                </Text>
                 {hasText(item.variantName) ? (
-                  <Text className="font-sans text-[12px] text-muted">{item.variantName}</Text>
+                  <Text className="font-sans text-[12px] text-muted">
+                    {item.variantName}
+                  </Text>
                 ) : null}
                 {item.addOns.map((addOn, index) => (
-                  <Text key={`${item.id}-${index}`} className="font-sans text-[12px] text-muted">
+                  <Text
+                    key={`${item.id}-${index}`}
+                    className="font-sans text-[12px] text-muted"
+                  >
                     + {addOn.name}
                   </Text>
                 ))}
                 {hasText(item.notes) ? (
-                  <Text className="font-sans text-[12px] italic text-muted">{item.notes}</Text>
+                  <Text className="font-sans text-[12px] italic text-muted">
+                    {item.notes}
+                  </Text>
                 ) : null}
               </View>
               <Text
@@ -324,7 +376,11 @@ function TrackingScreen() {
           <TotalRow label="Subtotal" value={data.totals.subtotal} />
           {data.totals.discountAmount > 0 ? (
             <TotalRow
-              label={hasText(data.couponCode) ? `Discount (${data.couponCode})` : "Discount"}
+              label={
+                hasText(data.couponCode)
+                  ? `Discount (${data.couponCode})`
+                  : "Discount"
+              }
               value={-data.totals.discountAmount}
             />
           ) : null}
@@ -342,7 +398,9 @@ function TrackingScreen() {
           <Divider />
 
           <View className="flex-row items-center justify-between">
-            <Text className="font-display text-[16px] font-bold text-primary">Total</Text>
+            <Text className="font-display text-[16px] font-bold text-primary">
+              Total
+            </Text>
             <Text
               className="font-display text-[16px] font-bold text-primary"
               style={{ fontVariant: ["tabular-nums"] }}
@@ -358,19 +416,32 @@ function TrackingScreen() {
 
         <Card className="gap-1">
           <Text className="font-sans text-[13px] font-semibold text-secondary">
-            Delivering to
+            {pickup ? "Collection" : "Delivering to"}
           </Text>
-          <Text className="font-sans text-[14px] text-primary">{data.deliveryAddress}</Text>
-          {hasText(data.deliveryLandmark) ? (
-            <Text className="font-sans text-[13px] text-muted">{data.deliveryLandmark}</Text>
+          <Text className="font-sans text-[14px] text-primary">
+            {pickup
+              ? `You're picking it up from ${data.restaurant.name}`
+              : data.deliveryAddress}
+          </Text>
+          {!pickup && hasText(data.deliveryLandmark) ? (
+            <Text className="font-sans text-[13px] text-muted">
+              {data.deliveryLandmark}
+            </Text>
           ) : null}
           {hasText(data.deliveryNotes) ? (
-            <Text className="font-sans text-[13px] italic text-muted">{data.deliveryNotes}</Text>
+            <Text className="font-sans text-[13px] italic text-muted">
+              {data.deliveryNotes}
+            </Text>
           ) : null}
         </Card>
 
         {data.canCancel ? (
-          <Button variant="outline" onPress={onCancel} loading={cancelOrder.isPending} fullWidth>
+          <Button
+            variant="outline"
+            onPress={onCancel}
+            loading={cancelOrder.isPending}
+            fullWidth
+          >
             Cancel order
           </Button>
         ) : null}

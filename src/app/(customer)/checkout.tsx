@@ -1,10 +1,18 @@
 import { useRouter } from "expo-router";
-import { Check, ChevronLeft, MapPin, Plus } from "lucide-react-native";
+import {
+  Bike,
+  Check,
+  ChevronLeft,
+  MapPin,
+  Plus,
+  Store,
+} from "lucide-react-native";
 import * as React from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { RequireAuth } from "@/components/shared/role-guard";
+import { RiderPicker } from "@/components/shared/rider-picker";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/input";
 import { Body, Card, Divider, Heading } from "@/components/ui/primitives";
@@ -14,6 +22,7 @@ import {
   useCart,
   usePlaceOrder,
   useSetDeliveryAddress,
+  useSetFulfilment,
   useSetTip,
 } from "@/hooks/use-cart";
 import { usePaymentMethods } from "@/hooks/use-payments";
@@ -22,7 +31,7 @@ import { ApiError } from "@/lib/api-client";
 import { isFilledCart } from "@/lib/cart";
 import { PAYMENT_METHOD_LABELS } from "@/lib/payment-labels";
 import { cn, formatLandmark, formatPrice, hasText } from "@/lib/utils";
-import type { PaymentMethod } from "@/types/enums";
+import { OrderType, type PaymentMethod } from "@/types/enums";
 
 /**
  * Address, payment method, place the order.
@@ -47,6 +56,7 @@ function CheckoutScreen() {
   const addresses = useAddresses({ limit: 20 });
   const setAddress = useSetDeliveryAddress();
   const setTip = useSetTip();
+  const setFulfilment = useSetFulfilment();
   const placeOrder = usePlaceOrder();
 
   const filled = isFilledCart(cart.data) ? cart.data : null;
@@ -56,7 +66,8 @@ function CheckoutScreen() {
   // simply does not offer it — so the restaurant has to be named.
   const methods = usePaymentMethods(restaurantId, restaurantId !== null);
 
-  const [paymentMethod, setPaymentMethod] = React.useState<PaymentMethod | null>(null);
+  const [paymentMethod, setPaymentMethod] =
+    React.useState<PaymentMethod | null>(null);
   const [note, setNote] = React.useState("");
 
   const available = React.useMemo(
@@ -83,7 +94,9 @@ function CheckoutScreen() {
   }
 
   if (cart.isError) {
-    return <ErrorState error={cart.error} onRetry={() => void cart.refetch()} />;
+    return (
+      <ErrorState error={cart.error} onRetry={() => void cart.refetch()} />
+    );
   }
 
   if (filled === null) {
@@ -94,7 +107,10 @@ function CheckoutScreen() {
         <Heading level={3} className="text-center">
           Nothing to check out
         </Heading>
-        <Button variant="outline" onPress={() => router.replace("/restaurants")}>
+        <Button
+          variant="outline"
+          onPress={() => router.replace("/restaurants")}
+        >
           Browse businesses
         </Button>
       </View>
@@ -125,6 +141,37 @@ function CheckoutScreen() {
   };
 
   const subtotal = filled.totals.subtotal;
+  const pickup = filled.fulfilment === OrderType.PICKUP;
+  const blocking = filled.issues.filter((issue) => issue.blocking);
+
+  const changeFulfilment = (fulfilment: OrderType) => {
+    if (fulfilment === filled.fulfilment) return;
+
+    setFulfilment.mutate(
+      { fulfilment },
+      {
+        onError: (error) =>
+          toast.error(
+            error instanceof ApiError ? error.message : "Couldn't change that.",
+          ),
+      },
+    );
+  };
+
+  const fulfilmentOptions = [
+    {
+      value: OrderType.DELIVERY,
+      label: "Delivery",
+      hint: "A rider brings it",
+      Icon: Bike,
+    },
+    {
+      value: OrderType.PICKUP,
+      label: "Self-pickup",
+      hint: "Collect it yourself",
+      Icon: Store,
+    },
+  ];
 
   return (
     <View className="flex-1 bg-canvas" style={{ paddingTop: insets.top }}>
@@ -132,98 +179,188 @@ function CheckoutScreen() {
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Go back"
-          onPress={() => (router.canGoBack() ? router.back() : router.replace("/cart"))}
+          onPress={() =>
+            router.canGoBack() ? router.back() : router.replace("/cart")
+          }
           hitSlop={8}
           className="h-10 w-10 items-center justify-center"
         >
           <ChevronLeft size={24} color="#0E7490" />
         </Pressable>
-        <Text className="font-display text-[19px] font-bold text-primary">Checkout</Text>
+        <Text className="font-display text-[19px] font-bold text-primary">
+          Checkout
+        </Text>
       </View>
 
-      <ScrollView contentContainerClassName="gap-4 px-4 pb-8" keyboardShouldPersistTaps="handled">
-        {/* ── Address ───────────────────────────────────────── */}
+      <ScrollView
+        contentContainerClassName="gap-4 px-4 pb-8"
+        keyboardShouldPersistTaps="handled"
+      >
+        {/* ── Delivery or pickup ────────────────────────────── */}
         <Card className="gap-3">
-          <Text className="font-sans text-[15px] font-semibold text-primary">Deliver to</Text>
-
-          {addresses.isPending ? (
-            <LoadingState />
-          ) : addresses.data !== undefined && addresses.data.items.length > 0 ? (
-            addresses.data.items.map((address) => {
-              const active = filled.delivery.addressId === address.id;
+          <Text className="font-sans text-[15px] font-semibold text-primary">
+            How you&apos;ll get it
+          </Text>
+          <View className="flex-row gap-2">
+            {fulfilmentOptions.map(({ value, label, hint, Icon }) => {
+              const active = filled.fulfilment === value;
 
               return (
                 <Pressable
-                  key={address.id}
+                  key={value}
                   accessibilityRole="radio"
-                  accessibilityState={{ selected: active, disabled: !address.isDeliverable }}
-                  disabled={!address.isDeliverable || setAddress.isPending}
-                  onPress={() =>
-                    setAddress.mutate(
-                      { addressId: address.id },
-                      {
-                        onError: (error) =>
-                          toast.error(
-                            error instanceof ApiError
-                              ? error.message
-                              : "Couldn't use that address.",
-                          ),
-                      },
-                    )
-                  }
+                  accessibilityState={{ selected: active }}
+                  disabled={setFulfilment.isPending}
+                  onPress={() => changeFulfilment(value)}
                   className={cn(
-                    "flex-row items-start gap-2 rounded-input border px-3 py-3",
-                    active ? "border-brand bg-brand-soft" : "border-border-default bg-surface",
-                    !address.isDeliverable && "opacity-60",
+                    "flex-1 gap-1 rounded-input border px-3 py-3",
+                    active
+                      ? "border-brand bg-brand-soft"
+                      : "border-border-default bg-surface",
                   )}
                 >
-                  <MapPin size={16} color={active ? "#0E7490" : "#75909F"} />
-                  <View className="flex-1">
-                    {hasText(address.label) ? (
-                      <Text className="font-sans text-[13px] font-semibold text-secondary">
-                        {address.label}
+                  <View className="flex-row items-center gap-1.5">
+                    <Icon size={16} color={active ? "#0E7490" : "#75909F"} />
+                    <Text
+                      className={cn(
+                        "font-sans text-[14px] font-semibold",
+                        active ? "text-brand" : "text-primary",
+                      )}
+                    >
+                      {label}
+                    </Text>
+                  </View>
+                  <Text className="font-sans text-[12px] text-muted">
+                    {hint}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+
+          {pickup ? (
+            <View className="gap-1 rounded-input border border-brand bg-brand-soft px-3 py-3">
+              <Text className="font-sans text-[14px] font-semibold text-primary">
+                You&apos;ll collect this order yourself
+              </Text>
+              <Body muted className="text-[13px]">
+                Once {filled.restaurant.name} confirms, they&apos;ll prepare it
+                and we&apos;ll tell you when it&apos;s ready. Pick it up at the
+                counter — no rider, no delivery fee.
+              </Body>
+              <Text className="font-sans text-[13px] font-semibold text-primary">
+                Ready in about{" "}
+                {filled.delivery.etaMinutes ??
+                  filled.restaurant.avgPreparationMinutes}{" "}
+                min after confirmation
+              </Text>
+            </View>
+          ) : null}
+        </Card>
+
+        {/* ── Address ───────────────────────────────────────── */}
+        {!pickup ? (
+          <Card className="gap-3">
+            <Text className="font-sans text-[15px] font-semibold text-primary">
+              Deliver to
+            </Text>
+
+            {addresses.isPending ? (
+              <LoadingState />
+            ) : addresses.data !== undefined &&
+              addresses.data.items.length > 0 ? (
+              addresses.data.items.map((address) => {
+                const active = filled.delivery.addressId === address.id;
+
+                return (
+                  <Pressable
+                    key={address.id}
+                    accessibilityRole="radio"
+                    accessibilityState={{
+                      selected: active,
+                      disabled: !address.isDeliverable,
+                    }}
+                    disabled={!address.isDeliverable || setAddress.isPending}
+                    onPress={() =>
+                      setAddress.mutate(
+                        { addressId: address.id },
+                        {
+                          onError: (error) =>
+                            toast.error(
+                              error instanceof ApiError
+                                ? error.message
+                                : "Couldn't use that address.",
+                            ),
+                        },
+                      )
+                    }
+                    className={cn(
+                      "flex-row items-start gap-2 rounded-input border px-3 py-3",
+                      active
+                        ? "border-brand bg-brand-soft"
+                        : "border-border-default bg-surface",
+                      !address.isDeliverable && "opacity-60",
+                    )}
+                  >
+                    <MapPin size={16} color={active ? "#0E7490" : "#75909F"} />
+                    <View className="flex-1">
+                      {hasText(address.label) ? (
+                        <Text className="font-sans text-[13px] font-semibold text-secondary">
+                          {address.label}
+                        </Text>
+                      ) : null}
+                      <Text className="font-sans text-[14px] text-primary">
+                        {address.line1}
                       </Text>
-                    ) : null}
-                    <Text className="font-sans text-[14px] text-primary">{address.line1}</Text>
-                    {hasText(address.landmark) ? (
-                      <Text className="font-sans text-[12px] text-muted">
-                        {formatLandmark(address.landmark)}
-                      </Text>
-                    ) : null}
-                    {/*
+                      {hasText(address.landmark) ? (
+                        <Text className="font-sans text-[12px] text-muted">
+                          {formatLandmark(address.landmark)}
+                        </Text>
+                      ) : null}
+                      {/*
                       An address outside every delivery zone can be saved but
                       not ordered to. Saying which one is the problem beats a
                       generic "we don't deliver there".
                     */}
-                    {!address.isDeliverable ? (
-                      <Text className="font-sans text-[12px] font-medium text-danger">
-                        Outside our delivery area
-                      </Text>
-                    ) : null}
-                  </View>
-                  {active ? <Check size={18} color="#0E7490" /> : null}
-                </Pressable>
-              );
-            })
-          ) : (
-            <Body muted className="text-[13px]">
-              You have no saved addresses yet.
-            </Body>
-          )}
+                      {!address.isDeliverable ? (
+                        <Text className="font-sans text-[12px] font-medium text-danger">
+                          Outside our delivery area
+                        </Text>
+                      ) : null}
+                    </View>
+                    {active ? <Check size={18} color="#0E7490" /> : null}
+                  </Pressable>
+                );
+              })
+            ) : (
+              <Body muted className="text-[13px]">
+                You have no saved addresses yet.
+              </Body>
+            )}
 
-          <Button
-            variant="outline"
-            size="sm"
-            icon={<Plus size={15} color="#0E7490" />}
-            onPress={() => router.push("/profile")}
-          >
-            Add an address
-          </Button>
-        </Card>
+            <Button
+              variant="outline"
+              size="sm"
+              icon={<Plus size={15} color="#0E7490" />}
+              onPress={() => router.push("/profile")}
+            >
+              Add an address
+            </Button>
+          </Card>
+        ) : null}
+
+        {/* ── Rider ─────────────────────────────────────────── */}
+        {!pickup && filled.delivery.addressId !== null ? (
+          <Card>
+            <RiderPicker cart={filled} />
+          </Card>
+        ) : null}
 
         {/* ── Payment ───────────────────────────────────────── */}
         <Card className="gap-3">
-          <Text className="font-sans text-[15px] font-semibold text-primary">How you&apos;ll pay</Text>
+          <Text className="font-sans text-[15px] font-semibold text-primary">
+            How you&apos;ll pay
+          </Text>
 
           {methods.isPending ? (
             <LoadingState />
@@ -243,7 +380,9 @@ function CheckoutScreen() {
                   onPress={() => setPaymentMethod(gateway.method)}
                   className={cn(
                     "flex-row items-center justify-between rounded-input border px-3 py-3",
-                    active ? "border-brand bg-brand-soft" : "border-border-default bg-surface",
+                    active
+                      ? "border-brand bg-brand-soft"
+                      : "border-border-default bg-surface",
                   )}
                 >
                   <Text
@@ -252,7 +391,9 @@ function CheckoutScreen() {
                       active ? "font-semibold text-brand" : "text-primary",
                     )}
                   >
-                    {PAYMENT_METHOD_LABELS[gateway.method] ?? gateway.name}
+                    {pickup && gateway.method === "CASH_ON_DELIVERY"
+                      ? "Cash at pickup"
+                      : (PAYMENT_METHOD_LABELS[gateway.method] ?? gateway.name)}
                   </Text>
                   {active ? <Check size={18} color="#0E7490" /> : null}
                 </Pressable>
@@ -267,66 +408,74 @@ function CheckoutScreen() {
           */}
           {paymentMethod === "QR_TRANSFER" ? (
             <Body muted className="text-[12px]">
-              You&apos;ll scan the business&apos;s QR code and pay them directly. The code
-              appears on your order screen once it&apos;s placed.
+              You&apos;ll scan the business&apos;s QR code and pay them
+              directly. The code appears on your order screen once it&apos;s
+              placed.
             </Body>
           ) : null}
         </Card>
 
         {/* ── Tip ───────────────────────────────────────────── */}
-        <Card className="gap-3">
-          <Text className="font-sans text-[15px] font-semibold text-primary">
-            Tip your rider
-          </Text>
-          <View className="flex-row gap-2">
-            {TIP_PRESETS.map((fraction) => {
-              const amount = Math.round(subtotal * fraction);
-              const active = filled.totals.tipAmount === amount;
+        {/* The tip is the rider's, and a pickup order has none. */}
+        {!pickup ? (
+          <Card className="gap-3">
+            <Text className="font-sans text-[15px] font-semibold text-primary">
+              Tip your rider
+            </Text>
+            <View className="flex-row gap-2">
+              {TIP_PRESETS.map((fraction) => {
+                const amount = Math.round(subtotal * fraction);
+                const active = filled.totals.tipAmount === amount;
 
-              return (
-                <Pressable
-                  key={fraction}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: active }}
-                  disabled={setTip.isPending}
-                  onPress={() =>
-                    setTip.mutate(
-                      { tipAmount: amount },
-                      {
-                        onError: (error) =>
-                          toast.error(
-                            error instanceof ApiError ? error.message : "Couldn't set that tip.",
-                          ),
-                      },
-                    )
-                  }
-                  className={cn(
-                    "flex-1 items-center rounded-input border py-2.5",
-                    active ? "border-brand bg-brand-soft" : "border-border-default bg-surface",
-                  )}
-                >
-                  <Text
+                return (
+                  <Pressable
+                    key={fraction}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: active }}
+                    disabled={setTip.isPending}
+                    onPress={() =>
+                      setTip.mutate(
+                        { tipAmount: amount },
+                        {
+                          onError: (error) =>
+                            toast.error(
+                              error instanceof ApiError
+                                ? error.message
+                                : "Couldn't set that tip.",
+                            ),
+                        },
+                      )
+                    }
                     className={cn(
-                      "font-sans text-[13px] font-semibold",
-                      active ? "text-brand" : "text-primary",
+                      "flex-1 items-center rounded-input border py-2.5",
+                      active
+                        ? "border-brand bg-brand-soft"
+                        : "border-border-default bg-surface",
                     )}
-                    style={{ fontVariant: ["tabular-nums"] }}
                   >
-                    {fraction === 0 ? "None" : `${fraction * 100}%`}
-                  </Text>
-                  {fraction > 0 ? (
                     <Text
-                      className="font-sans text-[11px] text-muted"
+                      className={cn(
+                        "font-sans text-[13px] font-semibold",
+                        active ? "text-brand" : "text-primary",
+                      )}
                       style={{ fontVariant: ["tabular-nums"] }}
                     >
-                      {formatPrice(amount)}
+                      {fraction === 0 ? "None" : `${fraction * 100}%`}
                     </Text>
-                  ) : null}
-                </Pressable>
-              );
-            })}
-          </View>
-        </Card>
+                    {fraction > 0 ? (
+                      <Text
+                        className="font-sans text-[11px] text-muted"
+                        style={{ fontVariant: ["tabular-nums"] }}
+                      >
+                        {formatPrice(amount)}
+                      </Text>
+                    ) : null}
+                  </Pressable>
+                );
+              })}
+            </View>
+          </Card>
+        ) : null}
 
         {/* ── Note ──────────────────────────────────────────── */}
         <Card>
@@ -334,7 +483,11 @@ function CheckoutScreen() {
             <Input
               value={note}
               onChangeText={setNote}
-              placeholder="Ring the bell, leave at the gate…"
+              placeholder={
+                pickup
+                  ? "I'll be there around 8 pm…"
+                  : "Ring the bell, leave at the gate…"
+              }
               multiline
               className="min-h-[70px] py-2.5"
               textAlignVertical="top"
@@ -364,7 +517,9 @@ function CheckoutScreen() {
 
           {filled.totals.discountAmount > 0 ? (
             <View className="flex-row justify-between">
-              <Text className="font-sans text-[14px] text-success">Discount</Text>
+              <Text className="font-sans text-[14px] text-success">
+                Discount
+              </Text>
               <Text
                 className="font-sans text-[14px] text-success"
                 style={{ fontVariant: ["tabular-nums"] }}
@@ -375,18 +530,26 @@ function CheckoutScreen() {
           ) : null}
 
           <View className="flex-row justify-between">
-            <Text className="font-sans text-[14px] text-secondary">Delivery</Text>
+            <Text className="font-sans text-[14px] text-secondary">
+              {pickup ? "Pickup" : "Delivery"}
+            </Text>
             <Text
               className="font-sans text-[14px] text-secondary"
               style={{ fontVariant: ["tabular-nums"] }}
             >
-              {filled.totals.deliveryFee === 0 ? "Free" : formatPrice(filled.totals.deliveryFee)}
+              {pickup
+                ? "No delivery fee"
+                : filled.totals.deliveryFee === 0
+                  ? "Free"
+                  : formatPrice(filled.totals.deliveryFee)}
             </Text>
           </View>
 
           {filled.totals.tipAmount > 0 ? (
             <View className="flex-row justify-between">
-              <Text className="font-sans text-[14px] text-secondary">Rider tip</Text>
+              <Text className="font-sans text-[14px] text-secondary">
+                Rider tip
+              </Text>
               <Text
                 className="font-sans text-[14px] text-secondary"
                 style={{ fontVariant: ["tabular-nums"] }}
@@ -398,7 +561,9 @@ function CheckoutScreen() {
 
           <Divider />
           <View className="flex-row justify-between">
-            <Text className="font-display text-[17px] font-bold text-primary">Total</Text>
+            <Text className="font-display text-[17px] font-bold text-primary">
+              Total
+            </Text>
             <Text
               className="font-display text-[17px] font-bold text-primary"
               style={{ fontVariant: ["tabular-nums"] }}
@@ -406,6 +571,15 @@ function CheckoutScreen() {
               {formatPrice(filled.totals.totalAmount)}
             </Text>
           </View>
+
+          {blocking.map((issue) => (
+            <Text
+              key={issue.code}
+              className="font-sans text-[13px] font-medium text-danger"
+            >
+              {issue.message}
+            </Text>
+          ))}
         </Card>
       </ScrollView>
 

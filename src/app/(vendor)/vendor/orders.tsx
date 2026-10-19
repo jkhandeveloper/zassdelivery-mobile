@@ -1,4 +1,4 @@
-import { ChefHat, CircleCheck, Clock, Phone } from "lucide-react-native";
+import { ChefHat, CircleCheck, Clock, Phone, Store } from "lucide-react-native";
 import * as React from "react";
 import { Alert, Linking, SectionList, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -6,7 +6,13 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRealtimeEvent, useRestaurantRoom } from "@/components/providers";
 import { VendorGate } from "@/components/shared/vendor-gate";
 import { Button } from "@/components/ui/button";
-import { Badge, Body, Card, Divider, Heading } from "@/components/ui/primitives";
+import {
+  Badge,
+  Body,
+  Card,
+  Divider,
+  Heading,
+} from "@/components/ui/primitives";
 import { EmptyState, ErrorState, LoadingState } from "@/components/ui/states";
 import { toast } from "@/components/ui/toast";
 import {
@@ -19,7 +25,7 @@ import {
 } from "@/hooks/use-vendor";
 import { ApiError } from "@/lib/api-client";
 import { formatPrice, formatRelative, hasText } from "@/lib/utils";
-import { OrderStatus } from "@/types/enums";
+import { OrderStatus, OrderType } from "@/types/enums";
 import type { OrderDto } from "@/types/order";
 import type { RestaurantAdminDto } from "@/types/restaurant";
 
@@ -37,14 +43,22 @@ import type { RestaurantAdminDto } from "@/types/restaurant";
  * would disagree the first time a dispatcher moved an order by hand.
  */
 
-const GROUPS: readonly { key: string; title: string; statuses: readonly OrderStatus[] }[] = [
+const GROUPS: readonly {
+  key: string;
+  title: string;
+  statuses: readonly OrderStatus[];
+}[] = [
   { key: "new", title: "New — waiting on you", statuses: [OrderStatus.PLACED] },
   {
     key: "cooking",
     title: "Cooking",
     statuses: [OrderStatus.CONFIRMED, OrderStatus.PREPARING],
   },
-  { key: "ready", title: "Ready for pickup", statuses: [OrderStatus.READY_FOR_PICKUP] },
+  {
+    key: "ready",
+    title: "Ready — rider or customer collecting",
+    statuses: [OrderStatus.READY_FOR_PICKUP],
+  },
 ];
 
 function Ticket({ order }: { order: OrderDto }) {
@@ -63,11 +77,24 @@ function Ticket({ order }: { order: OrderDto }) {
 
   const onError = React.useCallback((error: unknown) => {
     toast.error(
-      error instanceof ApiError ? error.message : "That didn't go through. Please try again.",
+      error instanceof ApiError
+        ? error.message
+        : "That didn't go through. Please try again.",
     );
   }, []);
 
-  const can = (status: OrderStatus) => order.allowedTransitions.includes(status);
+  const can = (status: OrderStatus) =>
+    order.allowedTransitions.includes(status);
+
+  // No rider is coming: the customer collects it, and the kitchen closes it.
+  const pickup = order.type === OrderType.PICKUP;
+
+  const call = (phone: string | null | undefined) => {
+    if (!hasText(phone)) return;
+    void Linking.openURL(`tel:${phone}`).catch(() =>
+      toast.error("Couldn't open the dialler", { description: phone }),
+    );
+  };
 
   const onReject = React.useCallback(() => {
     Alert.alert(
@@ -80,7 +107,10 @@ function Ticket({ order }: { order: OrderDto }) {
           style: "destructive",
           onPress: () =>
             rejectOrder.mutate(
-              { id: order.id, data: { reason: "The business could not accept this order" } },
+              {
+                id: order.id,
+                data: { reason: "The business could not accept this order" },
+              },
               { onSuccess: () => toast.success("Order rejected"), onError },
             ),
         },
@@ -124,6 +154,40 @@ function Ticket({ order }: { order: OrderDto }) {
         </View>
       </View>
 
+      {pickup ? (
+        <View className="gap-1.5 rounded-input border border-brand bg-brand-soft px-3 py-2.5">
+          <View className="flex-row items-center gap-1.5">
+            <Store size={14} color="#0E7490" />
+            <Text className="font-sans text-[12px] font-bold uppercase text-brand">
+              Customer pickup
+            </Text>
+          </View>
+          <Text className="font-sans text-[14px] text-primary">
+            {order.status === OrderStatus.PLACED
+              ? `${order.customer.name} will collect this order themselves.`
+              : `${order.customer.name} has confirmed the order and will collect it themselves.`}{" "}
+            No rider is coming.
+          </Text>
+          {hasText(order.customerNote) ? (
+            <Text className="font-sans text-[13px] font-semibold text-accent-warm">
+              “{order.customerNote}”
+            </Text>
+          ) : null}
+          {hasText(order.customer.phone) ? (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="self-start"
+              accessibilityLabel={`Call ${order.customer.name}`}
+              icon={<Phone size={14} color="#0E7490" />}
+              onPress={() => call(order.customer.phone)}
+            >
+              Call {order.customer.phone}
+            </Button>
+          ) : null}
+        </View>
+      ) : null}
+
       <Divider />
 
       <View className="gap-1.5">
@@ -136,12 +200,19 @@ function Ticket({ order }: { order: OrderDto }) {
               {item.quantity}×
             </Text>
             <View className="flex-1">
-              <Text className="font-sans text-[15px] text-primary">{item.name}</Text>
+              <Text className="font-sans text-[15px] text-primary">
+                {item.name}
+              </Text>
               {hasText(item.variantName) ? (
-                <Text className="font-sans text-[13px] text-secondary">{item.variantName}</Text>
+                <Text className="font-sans text-[13px] text-secondary">
+                  {item.variantName}
+                </Text>
               ) : null}
               {item.addOns.map((addOn, index) => (
-                <Text key={`${item.id}-${index}`} className="font-sans text-[13px] text-secondary">
+                <Text
+                  key={`${item.id}-${index}`}
+                  className="font-sans text-[13px] text-secondary"
+                >
                   + {addOn.name}
                 </Text>
               ))}
@@ -161,7 +232,9 @@ function Ticket({ order }: { order: OrderDto }) {
 
       {hasText(order.deliveryNotes) ? (
         <View className="rounded-input bg-surface-muted px-3 py-2">
-          <Text className="font-sans text-[13px] text-secondary">{order.deliveryNotes}</Text>
+          <Text className="font-sans text-[13px] text-secondary">
+            {order.deliveryNotes}
+          </Text>
         </View>
       ) : null}
 
@@ -176,13 +249,7 @@ function Ticket({ order }: { order: OrderDto }) {
               variant="ghost"
               accessibilityLabel={`Call ${order.driver.name}`}
               icon={<Phone size={14} color="#0E7490" />}
-              onPress={() => {
-                const phone = order.driver?.phone;
-                if (!hasText(phone)) return;
-                void Linking.openURL(`tel:${phone}`).catch(() =>
-                  toast.error("Couldn't open the dialler", { description: phone }),
-                );
-              }}
+              onPress={() => call(order.driver?.phone)}
             >
               Call
             </Button>
@@ -242,7 +309,12 @@ function Ticket({ order }: { order: OrderDto }) {
             icon={<CircleCheck size={15} color="#04202B" />}
             onPress={() =>
               markReady.mutate(order.id, {
-                onSuccess: () => toast.success("Marked ready — the rider is told"),
+                onSuccess: () =>
+                  toast.success(
+                    pickup
+                      ? "Marked ready — the customer is told to collect it"
+                      : "Marked ready — the rider is told",
+                  ),
                 onError,
               })
             }
@@ -263,14 +335,17 @@ function Ticket({ order }: { order: OrderDto }) {
             className="flex-1"
             onPress={() =>
               markDelivered.mutate(order.id, {
-                onSuccess: () => toast.success("Marked delivered"),
+                onSuccess: () =>
+                  toast.success(
+                    pickup ? "Marked collected" : "Marked delivered",
+                  ),
                 onError,
               })
             }
             loading={markDelivered.isPending}
             disabled={busy}
           >
-            Delivered
+            {pickup ? "Handed over" : "Delivered"}
           </Button>
         ) : null}
       </View>
@@ -361,5 +436,9 @@ function VendorOrders({ restaurant }: { restaurant: RestaurantAdminDto }) {
 }
 
 export default function Screen() {
-  return <VendorGate>{(restaurant) => <VendorOrders restaurant={restaurant} />}</VendorGate>;
+  return (
+    <VendorGate>
+      {(restaurant) => <VendorOrders restaurant={restaurant} />}
+    </VendorGate>
+  );
 }

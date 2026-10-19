@@ -3,11 +3,22 @@ import * as React from 'react'
 import { useAddresses } from '@/hooks/use-users'
 import { cartApi } from '@/lib/api/cart'
 import { orderApi } from '@/lib/api/orders'
-import type { AddCartItemDto, CartDto, UpdateCartItemDto, ApplyCouponDto, SetCartAddressDto, SetTipDto } from '@/types/cart'
+import type {
+  AddCartItemDto,
+  CartDto,
+  UpdateCartItemDto,
+  ApplyCouponDto,
+  SetCartAddressDto,
+  SetCartRiderDto,
+  SetFulfilmentDto,
+  SetTipDto,
+} from '@/types/cart'
+import { OrderType } from '@/types/enums'
 
 export const cartKeys = {
   all: ['cart'] as const,
   current: () => [...cartKeys.all, 'current'] as const,
+  riders: (addressId: string | null) => [...cartKeys.all, 'riders', addressId] as const,
 }
 
 /**
@@ -118,7 +129,12 @@ export function useEnsureCartAddress(cart: CartDto | null, enabled = true) {
   const attemptedFor = React.useRef<string | null>(null)
 
   const items = React.useMemo(() => addresses.data?.items ?? [], [addresses.data])
-  const needsAddress = enabled && cart !== null && cart.delivery.addressId === null
+  // A customer collecting the order themselves has nowhere to send it.
+  const needsAddress =
+    enabled &&
+    cart !== null &&
+    cart.fulfilment !== OrderType.PICKUP &&
+    cart.delivery.addressId === null
   const cartId = cart?.id ?? null
 
   React.useEffect(() => {
@@ -146,6 +162,44 @@ export function useSetTip() {
     mutationFn: (data: SetTipDto) => cartApi.setTip(data),
     onSuccess: (data) => {
       queryClient.setQueryData(cartKeys.current(), data)
+    },
+  })
+}
+
+/** Delivery or self-pickup. Switching to pickup also drops a chosen rider. */
+export function useSetFulfilment() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (data: SetFulfilmentDto) => cartApi.setFulfilment(data),
+    onSuccess: (data) => {
+      queryClient.setQueryData(cartKeys.current(), data)
+      void queryClient.invalidateQueries({ queryKey: [...cartKeys.all, 'riders'] })
+    },
+  })
+}
+
+/**
+ * Riders free to deliver this cart, each with their own rate and the fee to
+ * the cart's address. Keyed on the address because every fee depends on it,
+ * and refreshed every half minute because riders come and go.
+ */
+export function useCartRiders(addressId: string | null, enabled = true) {
+  return useQuery({
+    queryKey: cartKeys.riders(addressId),
+    queryFn: () => cartApi.getRiders(),
+    enabled,
+    refetchInterval: 30 * 1000,
+  })
+}
+
+/** Chooses the rider, or hands the choice back to dispatch with null. */
+export function useSetCartRider() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (data: SetCartRiderDto) => cartApi.setRider(data),
+    onSuccess: (data) => {
+      queryClient.setQueryData(cartKeys.current(), data)
+      void queryClient.invalidateQueries({ queryKey: [...cartKeys.all, 'riders'] })
     },
   })
 }

@@ -80,6 +80,8 @@ export interface RiderDto {
   rating: number
   ratingCount: number
   totalDeliveries: number
+  /** What this rider charges per kilometre. Null charges the platform rate. */
+  perKmRate: number | null
   vehicles: RiderVehicleDto[]
   documents: RiderDocumentDto[]
   /** Verified documents still outstanding before approval is possible. */
@@ -272,6 +274,20 @@ export interface DeliveryRatesDto {
   maxFee: number
   /** Orders further than this are not delivered. */
   maxDistanceKm: number
+  /** The lowest per-kilometre rate a rider may set. */
+  riderRateMin: number
+  /** The highest per-kilometre rate a rider may set. */
+  riderRateMax: number
+  /**
+   * The rider's own per-kilometre rate, shown to customers choosing a rider.
+   * Null charges the platform rate. Not capped at `maxFee`.
+   */
+  myPerKmRate: number | null
+}
+
+/** PUT /riders/me/delivery-rate. Null goes back to the platform rate. */
+export interface SetDeliveryRateDto {
+  perKmRate: number | null
 }
 
 export interface EarningsSummaryDto {
