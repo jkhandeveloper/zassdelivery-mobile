@@ -1,24 +1,35 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "expo-router";
-import { ChevronLeft, MapPin } from "lucide-react-native";
+import { ChevronLeft } from "lucide-react-native";
 import * as React from "react";
 import { useForm } from "react-hook-form";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { z } from "zod";
 
+import {
+  ShopLocationPicker,
+  useIsInServiceArea,
+} from "@/components/shared/shop-location-picker";
 import { Button } from "@/components/ui/button";
 import { ControlledInput } from "@/components/ui/controlled-input";
 import { Field } from "@/components/ui/input";
 import { Body, Card, Heading } from "@/components/ui/primitives";
 import { LoadingState } from "@/components/ui/states";
 import { toast } from "@/components/ui/toast";
-import { useGeolocation } from "@/hooks/use-geo";
-import { useRestaurantCategories, useRegisterRestaurant } from "@/hooks/use-restaurants";
+import {
+  useRestaurantCategories,
+  useRegisterRestaurant,
+} from "@/hooks/use-restaurants";
 import { ApiError } from "@/lib/api-client";
 import { BUSINESS_TYPES } from "@/lib/business-types";
 import { cn, hasText } from "@/lib/utils";
-import { BusinessType, PriceRange, type PriceRange as PriceRangeType } from "@/types/enums";
+import {
+  BusinessType,
+  PriceRange,
+  type PriceRange as PriceRangeType,
+} from "@/types/enums";
+import type { Coordinates } from "@/types/geo";
 
 /**
  * A vendor registering their own restaurant.
@@ -36,7 +47,11 @@ import { BusinessType, PriceRange, type PriceRange as PriceRangeType } from "@/t
  */
 
 const registerSchema = z.object({
-  name: z.string().trim().min(2, "Enter the business name").max(120, "That name is too long"),
+  name: z
+    .string()
+    .trim()
+    .min(2, "Enter the business name")
+    .max(120, "That name is too long"),
   description: z.string().trim().optional(),
   phone: z
     .string()
@@ -65,10 +80,17 @@ export default function VendorRegisterScreen() {
 
   const registerRestaurant = useRegisterRestaurant();
   const categories = useRestaurantCategories({ activeOnly: true });
-  const location = useGeolocation();
+  const [coordinates, setCoordinates] = React.useState<Coordinates | null>(
+    null,
+  );
+  const inServiceArea = useIsInServiceArea(coordinates);
 
-  const [businessType, setBusinessType] = React.useState<string>(BusinessType.RESTAURANT);
-  const [priceRange, setPriceRange] = React.useState<string>(PriceRange.MODERATE);
+  const [businessType, setBusinessType] = React.useState<string>(
+    BusinessType.RESTAURANT,
+  );
+  const [priceRange, setPriceRange] = React.useState<string>(
+    PriceRange.MODERATE,
+  );
   const [categoryIds, setCategoryIds] = React.useState<string[]>([]);
 
   const {
@@ -89,19 +111,25 @@ export default function VendorRegisterScreen() {
     mode: "onTouched",
   });
 
-  const coordinates = location.status === "ready" ? location.coordinates : null;
-
   const toggleCategory = (id: string) => {
     setCategoryIds((current) =>
-      current.includes(id) ? current.filter((entry) => entry !== id) : [...current, id],
+      current.includes(id)
+        ? current.filter((entry) => entry !== id)
+        : [...current, id],
     );
   };
 
   const onSubmit = handleSubmit(async (values) => {
-    if (coordinates === null) {
-      toast.error("Pin your location first", {
-        description: "Delivery zones and the order map are worked out from it.",
-      });
+    if (coordinates === null || !inServiceArea) {
+      toast.error(
+        coordinates === null
+          ? "Pin your shop location first"
+          : "That spot is outside our delivery areas",
+        {
+          description:
+            "Delivery zones and the order map are worked out from it.",
+        },
+      );
       return;
     }
 
@@ -127,9 +155,12 @@ export default function VendorRegisterScreen() {
         categoryIds,
         businessType: businessType as BusinessType,
         priceRange: priceRange as PriceRangeType,
-        ...(Number.isFinite(minOrder) && minOrder > 0 && { minOrderAmount: minOrder }),
+        ...(Number.isFinite(minOrder) &&
+          minOrder > 0 && { minOrderAmount: minOrder }),
         ...(Number.isFinite(prepMinutes) &&
-          prepMinutes > 0 && { avgPreparationMinutes: Math.round(prepMinutes) }),
+          prepMinutes > 0 && {
+            avgPreparationMinutes: Math.round(prepMinutes),
+          }),
       });
 
       toast.success("Registered", {
@@ -153,7 +184,9 @@ export default function VendorRegisterScreen() {
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Go back"
-          onPress={() => (router.canGoBack() ? router.back() : router.replace("/vendor"))}
+          onPress={() =>
+            router.canGoBack() ? router.back() : router.replace("/vendor")
+          }
           hitSlop={8}
           className="h-10 w-10 items-center justify-center"
         >
@@ -164,10 +197,13 @@ export default function VendorRegisterScreen() {
         </Text>
       </View>
 
-      <ScrollView contentContainerClassName="gap-4 px-4 pb-8" keyboardShouldPersistTaps="handled">
+      <ScrollView
+        contentContainerClassName="gap-4 px-4 pb-8"
+        keyboardShouldPersistTaps="handled"
+      >
         <Body muted className="text-[13px]">
-          An administrator reviews every listing before it goes live. You can set up your menu
-          and hours while you wait.
+          An administrator reviews every listing before it goes live. You can
+          set up your menu and hours while you wait.
         </Body>
 
         <ControlledInput
@@ -191,7 +227,9 @@ export default function VendorRegisterScreen() {
                   onPress={() => setBusinessType(value)}
                   className={cn(
                     "rounded-input border px-3 py-2.5",
-                    active ? "border-brand bg-brand-soft" : "border-border-default bg-surface",
+                    active
+                      ? "border-brand bg-brand-soft"
+                      : "border-border-default bg-surface",
                   )}
                 >
                   <Text
@@ -202,7 +240,9 @@ export default function VendorRegisterScreen() {
                   >
                     {meta.label}
                   </Text>
-                  <Text className="font-sans text-[12px] text-secondary">{meta.hint}</Text>
+                  <Text className="font-sans text-[12px] text-secondary">
+                    {meta.hint}
+                  </Text>
                 </Pressable>
               );
             })}
@@ -229,7 +269,9 @@ export default function VendorRegisterScreen() {
                     onPress={() => toggleCategory(category.id)}
                     className={cn(
                       "rounded-full border px-3.5 py-2",
-                      active ? "border-brand bg-brand-soft" : "border-border-default bg-surface",
+                      active
+                        ? "border-brand bg-brand-soft"
+                        : "border-border-default bg-surface",
                     )}
                   >
                     <Text
@@ -260,7 +302,9 @@ export default function VendorRegisterScreen() {
                   onPress={() => setPriceRange(value)}
                   className={cn(
                     "flex-1 items-center rounded-input border py-2.5",
-                    active ? "border-brand bg-brand-soft" : "border-border-default bg-surface",
+                    active
+                      ? "border-brand bg-brand-soft"
+                      : "border-border-default bg-surface",
                   )}
                 >
                   <Text
@@ -315,49 +359,11 @@ export default function VendorRegisterScreen() {
         />
 
         {/*
-          Required by the API and genuinely load-bearing — this has to be done
-          standing at the restaurant, not from home.
+          Required by the API and genuinely load-bearing: riders collect from
+          this point and every delivery is priced from it.
         */}
         <Card className="gap-2">
-          <Text className="font-sans text-[14px] font-semibold text-primary">
-            Pin your location
-          </Text>
-          <Body muted className="text-[13px]">
-            Do this while you are at the business. Your delivery area and every order map are
-            worked out from this point.
-          </Body>
-
-          {coordinates !== null ? (
-            <View className="flex-row items-center gap-2">
-              <MapPin size={16} color="#047857" />
-              <Text className="flex-1 font-sans text-[13px] text-success">
-                Location captured
-                {location.status === "ready" && location.accuracyMetres !== null
-                  ? ` (±${location.accuracyMetres} m)`
-                  : ""}
-              </Text>
-              <Button size="sm" variant="ghost" onPress={location.locate}>
-                Redo
-              </Button>
-            </View>
-          ) : location.status === "error" ? (
-            <View className="gap-2">
-              <Text className="font-sans text-[13px] text-danger">{location.message}</Text>
-              <Button size="sm" variant="outline" onPress={location.locate}>
-                Try again
-              </Button>
-            </View>
-          ) : (
-            <Button
-              size="sm"
-              variant="outline"
-              loading={location.status === "locating"}
-              onPress={location.locate}
-              icon={<MapPin size={15} color="#0E7490" />}
-            >
-              Use my current location
-            </Button>
-          )}
+          <ShopLocationPicker value={coordinates} onChange={setCoordinates} />
         </Card>
 
         <ControlledInput
@@ -382,7 +388,7 @@ export default function VendorRegisterScreen() {
           size="lg"
           onPress={() => void onSubmit()}
           loading={isSubmitting}
-          disabled={coordinates === null}
+          disabled={coordinates === null || !inServiceArea}
         >
           Submit for review
         </Button>

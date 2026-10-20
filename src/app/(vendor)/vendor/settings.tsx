@@ -11,13 +11,20 @@ import { z } from "zod";
 import { useAuth } from "@/components/providers";
 import { ImageUploadField } from "@/components/shared/image-upload-field";
 import { VendorGate } from "@/components/shared/vendor-gate";
+import {
+  ShopLocationPicker,
+  useIsInServiceArea,
+} from "@/components/shared/shop-location-picker";
 import { Button } from "@/components/ui/button";
 import { ControlledInput } from "@/components/ui/controlled-input";
 import { Field, Input } from "@/components/ui/input";
 import { Body, Card, Divider, Heading } from "@/components/ui/primitives";
 import { LoadingState } from "@/components/ui/states";
 import { toast } from "@/components/ui/toast";
-import { useRestaurantHours, useRestaurantImages } from "@/hooks/use-restaurants";
+import {
+  useRestaurantHours,
+  useRestaurantImages,
+} from "@/hooks/use-restaurants";
 import {
   useAddImage,
   useDeleteImage,
@@ -27,7 +34,11 @@ import {
 } from "@/hooks/use-vendor";
 import { ApiError } from "@/lib/api-client";
 import { BUSINESS_TYPES, BUSINESS_TYPE_ORDER } from "@/lib/business-types";
-import { MAX_PAYMENT_QR_CODES, QR_PROVIDER_LABELS, QR_PROVIDER_ORDER } from "@/lib/payment-labels";
+import {
+  MAX_PAYMENT_QR_CODES,
+  QR_PROVIDER_LABELS,
+  QR_PROVIDER_ORDER,
+} from "@/lib/payment-labels";
 import { cn, hasText } from "@/lib/utils";
 import { UserRole } from "@/types/auth";
 import {
@@ -38,6 +49,7 @@ import {
 } from "@/types/enums";
 import type { BusinessHourDto, RestaurantAdminDto } from "@/types/restaurant";
 import type { PaymentQrCodeInputDto } from "@/types/payment";
+import type { Coordinates } from "@/types/geo";
 
 /**
  * Everything about the listing that is not the menu or the order queue.
@@ -63,7 +75,11 @@ const DAYS: readonly { key: string; label: string }[] = [
 ];
 
 const profileSchema = z.object({
-  name: z.string().trim().min(2, "Enter the business name").max(120, "That name is too long"),
+  name: z
+    .string()
+    .trim()
+    .min(2, "Enter the business name")
+    .max(120, "That name is too long"),
   description: z.string().trim().optional(),
   phone: z
     .string()
@@ -74,8 +90,14 @@ const profileSchema = z.object({
     ),
   addressLine: z.string().trim().min(5, "Enter the street address"),
   landmark: z.string().trim().optional(),
-  businessType: z.enum(BUSINESS_TYPE_ORDER as [BusinessType, ...BusinessType[]]),
-  priceRange: z.enum([PriceRange.BUDGET, PriceRange.MODERATE, PriceRange.PREMIUM]),
+  businessType: z.enum(
+    BUSINESS_TYPE_ORDER as [BusinessType, ...BusinessType[]],
+  ),
+  priceRange: z.enum([
+    PriceRange.BUDGET,
+    PriceRange.MODERATE,
+    PriceRange.PREMIUM,
+  ]),
   minOrderAmount: z.string().trim(),
   avgPreparationMinutes: z.string().trim(),
   deliveryRadiusKm: z.string().trim(),
@@ -116,6 +138,18 @@ function ProfileSection({ restaurant }: { restaurant: RestaurantAdminDto }) {
     mode: "onTouched",
   });
 
+  // The pin lives outside the form: it is a map, not a text field.
+  const savedLocation = {
+    latitude: restaurant.latitude,
+    longitude: restaurant.longitude,
+  };
+  const [location, setLocation] = React.useState<Coordinates>(savedLocation);
+  const inServiceArea = useIsInServiceArea(location);
+  // Sent only when the pin moved: a move re-resolves the delivery zone.
+  const moved =
+    location.latitude !== savedLocation.latitude ||
+    location.longitude !== savedLocation.longitude;
+
   const businessType = watch("businessType");
   const priceRange = watch("priceRange");
 
@@ -135,10 +169,19 @@ function ProfileSection({ restaurant }: { restaurant: RestaurantAdminDto }) {
       return;
     }
 
+    if (moved && !inServiceArea) {
+      toast.error("Move the pin into an area we deliver in");
+      return;
+    }
+
     const radiusMeters = Math.round(Number(values.deliveryRadiusKm) * 1000);
 
     // The API's own bounds, checked here so the message names the field.
-    if (!Number.isFinite(radiusMeters) || radiusMeters < 100 || radiusMeters > 50000) {
+    if (
+      !Number.isFinite(radiusMeters) ||
+      radiusMeters < 100 ||
+      radiusMeters > 50000
+    ) {
       toast.error("Delivery radius must be between 0.1 and 50 km");
       return;
     }
@@ -157,6 +200,10 @@ function ProfileSection({ restaurant }: { restaurant: RestaurantAdminDto }) {
         minOrderAmount: minOrder,
         avgPreparationMinutes: Math.round(prepMinutes),
         deliveryRadiusMeters: radiusMeters,
+        ...(moved && {
+          latitude: location.latitude,
+          longitude: location.longitude,
+        }),
       });
 
       // What was just saved is the new baseline — otherwise the form stays
@@ -164,7 +211,11 @@ function ProfileSection({ restaurant }: { restaurant: RestaurantAdminDto }) {
       reset(values);
       toast.success("Details saved");
     } catch (error) {
-      toast.error(error instanceof ApiError ? error.message : "Couldn't save those details.");
+      toast.error(
+        error instanceof ApiError
+          ? error.message
+          : "Couldn't save those details.",
+      );
     }
   });
 
@@ -180,7 +231,13 @@ function ProfileSection({ restaurant }: { restaurant: RestaurantAdminDto }) {
         worse than its absence; the gallery below is the photo surface a vendor
         actually controls.
       */}
-      <ControlledInput control={control} name="name" label="Name" required editable={!isSubmitting} />
+      <ControlledInput
+        control={control}
+        name="name"
+        label="Name"
+        required
+        editable={!isSubmitting}
+      />
 
       <Field label="Kind of business" hint={BUSINESS_TYPES[businessType].hint}>
         <View className="flex-row flex-wrap gap-2">
@@ -193,10 +250,14 @@ function ProfileSection({ restaurant }: { restaurant: RestaurantAdminDto }) {
                 accessibilityRole="radio"
                 accessibilityState={{ selected: active }}
                 disabled={isSubmitting}
-                onPress={() => setValue("businessType", option, { shouldDirty: true })}
+                onPress={() =>
+                  setValue("businessType", option, { shouldDirty: true })
+                }
                 className={cn(
                   "rounded-full border px-3.5 py-2",
-                  active ? "border-brand bg-brand-soft" : "border-border-default bg-surface",
+                  active
+                    ? "border-brand bg-brand-soft"
+                    : "border-border-default bg-surface",
                 )}
               >
                 <Text
@@ -245,9 +306,10 @@ function ProfileSection({ restaurant }: { restaurant: RestaurantAdminDto }) {
         hint="What a rider would recognise from the road."
         editable={!isSubmitting}
       />
+      <ShopLocationPicker value={location} onChange={setLocation} />
       <Body muted className="text-[13px]">
-        Listed in {restaurant.zone.name}, {restaurant.city.name}. The map pin is set when you
-        register and changed by support.
+        Listed in {restaurant.zone.name}, {restaurant.city.name}. Moving the pin
+        can change your delivery zone.
       </Body>
 
       <Field label="Price range">
@@ -261,10 +323,14 @@ function ProfileSection({ restaurant }: { restaurant: RestaurantAdminDto }) {
                 accessibilityRole="radio"
                 accessibilityState={{ selected: active }}
                 disabled={isSubmitting}
-                onPress={() => setValue("priceRange", option, { shouldDirty: true })}
+                onPress={() =>
+                  setValue("priceRange", option, { shouldDirty: true })
+                }
                 className={cn(
                   "flex-1 items-center rounded-input border py-2.5",
-                  active ? "border-brand bg-brand-soft" : "border-border-default bg-surface",
+                  active
+                    ? "border-brand bg-brand-soft"
+                    : "border-border-default bg-surface",
                 )}
               >
                 <Text
@@ -308,7 +374,12 @@ function ProfileSection({ restaurant }: { restaurant: RestaurantAdminDto }) {
         editable={!isSubmitting}
       />
 
-      <Button fullWidth onPress={() => void onSubmit()} loading={isSubmitting} disabled={!isDirty}>
+      <Button
+        fullWidth
+        onPress={() => void onSubmit()}
+        loading={isSubmitting}
+        disabled={!isDirty && !moved}
+      >
         Save details
       </Button>
     </Card>
@@ -333,7 +404,9 @@ function HoursSection({ restaurant }: { restaurant: RestaurantAdminDto }) {
     setSeededFor(restaurant.id);
     setDraft(
       DAYS.map((day) => {
-        const existing = hours.data.hours.find((entry) => entry.dayOfWeek === day.key);
+        const existing = hours.data.hours.find(
+          (entry) => entry.dayOfWeek === day.key,
+        );
 
         return {
           dayOfWeek: day.key,
@@ -382,7 +455,9 @@ function HoursSection({ restaurant }: { restaurant: RestaurantAdminDto }) {
               <Switch
                 value={open}
                 accessibilityLabel={`${day?.label ?? entry.dayOfWeek}: ${open ? "open" : "closed"}`}
-                onValueChange={(next) => setDay(entry.dayOfWeek, { isClosed: !next })}
+                onValueChange={(next) =>
+                  setDay(entry.dayOfWeek, { isClosed: !next })
+                }
                 trackColor={{ false: "#CFDFE9", true: "#22D3EE" }}
                 thumbColor="#FFFFFF"
               />
@@ -393,7 +468,9 @@ function HoursSection({ restaurant }: { restaurant: RestaurantAdminDto }) {
                 <View className="flex-1">
                   <Input
                     value={entry.opensAt}
-                    onChangeText={(text) => setDay(entry.dayOfWeek, { opensAt: text })}
+                    onChangeText={(text) =>
+                      setDay(entry.dayOfWeek, { opensAt: text })
+                    }
                     placeholder="10:00"
                     keyboardType="numbers-and-punctuation"
                     accessibilityLabel={`${day?.label ?? ""} opening time`}
@@ -403,7 +480,9 @@ function HoursSection({ restaurant }: { restaurant: RestaurantAdminDto }) {
                 <View className="flex-1">
                   <Input
                     value={entry.closesAt}
-                    onChangeText={(text) => setDay(entry.dayOfWeek, { closesAt: text })}
+                    onChangeText={(text) =>
+                      setDay(entry.dayOfWeek, { closesAt: text })
+                    }
                     placeholder="23:00"
                     keyboardType="numbers-and-punctuation"
                     accessibilityLabel={`${day?.label ?? ""} closing time`}
@@ -411,7 +490,9 @@ function HoursSection({ restaurant }: { restaurant: RestaurantAdminDto }) {
                 </View>
               </View>
             ) : (
-              <Text className="font-sans text-[13px] text-muted">Closed all day</Text>
+              <Text className="font-sans text-[13px] text-muted">
+                Closed all day
+              </Text>
             )}
           </View>
         );
@@ -427,12 +508,17 @@ function HoursSection({ restaurant }: { restaurant: RestaurantAdminDto }) {
           const bad = draft.find(
             (entry) =>
               entry.isClosed !== true &&
-              (!/^\d{2}:\d{2}$/.test(entry.opensAt) || !/^\d{2}:\d{2}$/.test(entry.closesAt)),
+              (!/^\d{2}:\d{2}$/.test(entry.opensAt) ||
+                !/^\d{2}:\d{2}$/.test(entry.closesAt)),
           );
 
           if (bad !== undefined) {
-            const label = DAYS.find((item) => item.key === bad.dayOfWeek)?.label ?? bad.dayOfWeek;
-            toast.error(`Check ${label}`, { description: "Times must look like 10:00 and 23:00." });
+            const label =
+              DAYS.find((item) => item.key === bad.dayOfWeek)?.label ??
+              bad.dayOfWeek;
+            toast.error(`Check ${label}`, {
+              description: "Times must look like 10:00 and 23:00.",
+            });
             return;
           }
 
@@ -441,7 +527,11 @@ function HoursSection({ restaurant }: { restaurant: RestaurantAdminDto }) {
             {
               onSuccess: () => toast.success("Hours saved"),
               onError: (error) =>
-                toast.error(error instanceof ApiError ? error.message : "Couldn't save hours."),
+                toast.error(
+                  error instanceof ApiError
+                    ? error.message
+                    : "Couldn't save hours.",
+                ),
             },
           );
         }}
@@ -476,7 +566,11 @@ function GallerySection({ restaurant }: { restaurant: RestaurantAdminDto }) {
             {
               onSuccess: () => toast.success("Photo added"),
               onError: (error) =>
-                toast.error(error instanceof ApiError ? error.message : "Couldn't add that."),
+                toast.error(
+                  error instanceof ApiError
+                    ? error.message
+                    : "Couldn't add that.",
+                ),
             },
           );
         }}
@@ -488,7 +582,12 @@ function GallerySection({ restaurant }: { restaurant: RestaurantAdminDto }) {
             <View key={image.id} className="relative">
               <Image
                 source={{ uri: image.url }}
-                style={{ width: 100, height: 100, borderRadius: 12, backgroundColor: "#E4EEF5" }}
+                style={{
+                  width: 100,
+                  height: 100,
+                  borderRadius: 12,
+                  backgroundColor: "#E4EEF5",
+                }}
                 contentFit="cover"
                 accessible={false}
               />
@@ -507,7 +606,9 @@ function GallerySection({ restaurant }: { restaurant: RestaurantAdminDto }) {
                           onSuccess: () => toast.success("Photo removed"),
                           onError: (error) =>
                             toast.error(
-                              error instanceof ApiError ? error.message : "Couldn't remove that.",
+                              error instanceof ApiError
+                                ? error.message
+                                : "Couldn't remove that.",
                             ),
                         }),
                     },
@@ -534,7 +635,9 @@ function PaymentsSection({ restaurant }: { restaurant: RestaurantAdminDto }) {
 
   const existing = restaurant.paymentQrCodes ?? [];
 
-  const [provider, setProvider] = React.useState<PaymentQrProvider>(QR_PROVIDER_ORDER[0]);
+  const [provider, setProvider] = React.useState<PaymentQrProvider>(
+    QR_PROVIDER_ORDER[0],
+  );
   const [accountTitle, setAccountTitle] = React.useState("");
   const [accountNumber, setAccountNumber] = React.useState("");
   const [imageUrl, setImageUrl] = React.useState<string | null>(null);
@@ -550,7 +653,9 @@ function PaymentsSection({ restaurant }: { restaurant: RestaurantAdminDto }) {
       {
         onSuccess: () => toast.success("Payment codes updated"),
         onError: (error) =>
-          toast.error(error instanceof ApiError ? error.message : "Couldn't save those."),
+          toast.error(
+            error instanceof ApiError ? error.message : "Couldn't save those.",
+          ),
       },
     );
   };
@@ -582,7 +687,9 @@ function PaymentsSection({ restaurant }: { restaurant: RestaurantAdminDto }) {
       {
         provider,
         accountTitle: accountTitle.trim(),
-        ...(accountNumber.trim() !== "" && { accountNumber: accountNumber.trim() }),
+        ...(accountNumber.trim() !== "" && {
+          accountNumber: accountNumber.trim(),
+        }),
         imageUrl,
       },
     ]);
@@ -596,8 +703,8 @@ function PaymentsSection({ restaurant }: { restaurant: RestaurantAdminDto }) {
     <Card className="gap-3">
       <Heading level={3}>Scan &amp; pay</Heading>
       <Body muted className="text-[13px]">
-        Customers scan these to pay you directly. ZassDelivery never holds your money, so make
-        sure the account details are yours and correct.
+        Customers scan these to pay you directly. ZassDelivery never holds your
+        money, so make sure the account details are yours and correct.
       </Body>
 
       {existing.length > 0 ? (
@@ -609,15 +716,24 @@ function PaymentsSection({ restaurant }: { restaurant: RestaurantAdminDto }) {
             >
               <Image
                 source={{ uri: code.imageUrl }}
-                style={{ width: 52, height: 52, borderRadius: 8, backgroundColor: "#FFFFFF" }}
+                style={{
+                  width: 52,
+                  height: 52,
+                  borderRadius: 8,
+                  backgroundColor: "#FFFFFF",
+                }}
                 contentFit="contain"
                 accessible={false}
               />
               <View className="flex-1">
                 <Text className="font-sans text-[14px] font-semibold text-primary">
-                  {hasText(code.label) ? code.label : QR_PROVIDER_LABELS[code.provider]}
+                  {hasText(code.label)
+                    ? code.label
+                    : QR_PROVIDER_LABELS[code.provider]}
                 </Text>
-                <Text className="font-sans text-[12px] text-secondary">{code.accountTitle}</Text>
+                <Text className="font-sans text-[12px] text-secondary">
+                  {code.accountTitle}
+                </Text>
               </View>
               <Pressable
                 accessibilityRole="button"
@@ -633,7 +749,11 @@ function PaymentsSection({ restaurant }: { restaurant: RestaurantAdminDto }) {
                         text: "Remove",
                         style: "destructive",
                         onPress: () =>
-                          save(asInput().filter((_, position) => position !== index)),
+                          save(
+                            asInput().filter(
+                              (_, position) => position !== index,
+                            ),
+                          ),
                       },
                     ],
                   )
@@ -648,7 +768,8 @@ function PaymentsSection({ restaurant }: { restaurant: RestaurantAdminDto }) {
       ) : (
         <View className="rounded-input bg-warning-soft px-3 py-2.5">
           <Text className="font-sans text-[13px] font-medium text-warning">
-            No codes yet — scan-to-pay is switched off at checkout until you add one.
+            No codes yet — scan-to-pay is switched off at checkout until you add
+            one.
           </Text>
         </View>
       )}
@@ -656,7 +777,9 @@ function PaymentsSection({ restaurant }: { restaurant: RestaurantAdminDto }) {
       {existing.length < MAX_PAYMENT_QR_CODES ? (
         <View className="gap-3">
           <Divider />
-          <Text className="font-sans text-[14px] font-semibold text-primary">Add a code</Text>
+          <Text className="font-sans text-[14px] font-semibold text-primary">
+            Add a code
+          </Text>
 
           <Field label="Wallet or bank" required>
             <View className="flex-row flex-wrap gap-2">
@@ -671,7 +794,9 @@ function PaymentsSection({ restaurant }: { restaurant: RestaurantAdminDto }) {
                     onPress={() => setProvider(option)}
                     className={cn(
                       "rounded-full border px-3.5 py-2",
-                      active ? "border-brand bg-brand-soft" : "border-border-default bg-surface",
+                      active
+                        ? "border-brand bg-brand-soft"
+                        : "border-border-default bg-surface",
                     )}
                   >
                     <Text
@@ -726,7 +851,8 @@ function PaymentsSection({ restaurant }: { restaurant: RestaurantAdminDto }) {
         </View>
       ) : (
         <Body muted className="text-[12px]">
-          You have the maximum of {MAX_PAYMENT_QR_CODES} codes. Remove one to add another.
+          You have the maximum of {MAX_PAYMENT_QR_CODES} codes. Remove one to
+          add another.
         </Body>
       )}
     </Card>
@@ -742,7 +868,10 @@ function VendorSettings({ restaurant }: { restaurant: RestaurantAdminDto }) {
 
   return (
     <View className="flex-1 bg-canvas" style={{ paddingTop: insets.top }}>
-      <ScrollView contentContainerClassName="gap-4 px-4 pb-8" keyboardShouldPersistTaps="handled">
+      <ScrollView
+        contentContainerClassName="gap-4 px-4 pb-8"
+        keyboardShouldPersistTaps="handled"
+      >
         <Heading level={2} className="pt-2">
           Settings
         </Heading>
@@ -783,7 +912,9 @@ function VendorSettings({ restaurant }: { restaurant: RestaurantAdminDto }) {
             className="flex-row items-center gap-3 py-1"
           >
             <UserRound size={18} color="#75909F" />
-            <Text className="flex-1 font-sans text-[15px] text-primary">My profile</Text>
+            <Text className="flex-1 font-sans text-[15px] text-primary">
+              My profile
+            </Text>
             <ChevronRight size={18} color="#75909F" />
           </Pressable>
         </Card>
@@ -793,5 +924,9 @@ function VendorSettings({ restaurant }: { restaurant: RestaurantAdminDto }) {
 }
 
 export default function Screen() {
-  return <VendorGate allowUnapproved>{(restaurant) => <VendorSettings restaurant={restaurant} />}</VendorGate>;
+  return (
+    <VendorGate allowUnapproved>
+      {(restaurant) => <VendorSettings restaurant={restaurant} />}
+    </VendorGate>
+  );
 }
