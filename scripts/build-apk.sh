@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Build a standalone "ZassDeliver (Preview)" APK in WSL — no Metro, no cloud.
+# Build a standalone "ZassFood (Preview)" APK in WSL — no Metro, no cloud.
 #
 #   ./scripts/build-apk.sh                          # the origin in .env, else this machine's LAN IP
 #   ./scripts/build-apk.sh http://192.168.1.50:3002 # API somewhere specific

@@ -29,9 +29,9 @@ import { toast } from "@/components/ui/toast";
  */
 
 const LEGAL_LINKS: readonly { label: string; url: string }[] = [
-  { label: "Terms of service", url: "https://zassdeliver.com/terms" },
-  { label: "Privacy policy", url: "https://zassdeliver.com/privacy" },
-  { label: "Refund policy", url: "https://zassdeliver.com/refunds" },
+  { label: "Terms of service", url: "https://zassfood.zasstech.com/terms" },
+  { label: "Privacy policy", url: "https://zassfood.zasstech.com/privacy" },
+  { label: "Refund policy", url: "https://zassfood.zasstech.com/refunds" },
 ];
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -70,7 +70,7 @@ export default function LegalScreen() {
 
       <ScrollView contentContainerClassName="gap-4 px-4 pb-8">
         <Body muted className="text-[13px]">
-          A plain-language summary of how ZassDelivery works. The full policies are linked at the
+          A plain-language summary of how ZassFood works. The full policies are linked at the
           bottom and are what apply.
         </Body>
 
@@ -78,7 +78,7 @@ export default function LegalScreen() {
           <Body muted className="text-[14px]">
             You pay the business, not us. Depending on what the business offers, that is
             cash to the rider at your door, or a transfer you make by scanning the
-            business&apos;s own QR code. ZassDelivery never holds your money and never takes a
+            business&apos;s own QR code. ZassFood never holds your money and never takes a
             cut of your order.
           </Body>
           <Body muted className="text-[14px]">

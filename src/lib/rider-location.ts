@@ -223,7 +223,7 @@ export async function startBackgroundReporting(): Promise<void> {
     // whole delivery, and Android requires the notification to be honest about
     // what is happening — which is also the right thing to show a rider.
     foregroundService: {
-      notificationTitle: "ZassDeliver is sharing your location",
+      notificationTitle: "ZassFood is sharing your location",
       notificationBody: "Your customer can see where their order is.",
       notificationColor: "#0E7490",
     },

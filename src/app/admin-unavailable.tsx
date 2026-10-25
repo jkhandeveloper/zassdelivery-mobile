@@ -42,15 +42,15 @@ export default function AdminUnavailableScreen() {
 
       <Body muted className="text-center">
         The admin dashboard — dispatch, businesses, riders, payments and billing — runs on the
-        web, where there is room for it. Sign in at the ZassDelivery dashboard on a computer.
+        web, where there is room for it. Sign in at the ZassFood dashboard on a computer.
       </Body>
 
       <Button
         fullWidth
         onPress={() => {
-          void Linking.openURL("https://zassdeliver.com/admin").catch(() =>
+          void Linking.openURL("https://zassfood.zasstech.com/admin").catch(() =>
             toast.error("Couldn't open the dashboard", {
-              description: "Go to zassdeliver.com/admin in a browser.",
+              description: "Go to zassfood.zasstech.com/admin in a browser.",
             }),
           );
         }}

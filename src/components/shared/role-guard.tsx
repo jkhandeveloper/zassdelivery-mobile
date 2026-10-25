@@ -50,7 +50,7 @@ export function RoleGuard({
             This area isn&apos;t yours
           </Heading>
           <Body muted className="text-center">
-            Your account doesn&apos;t have access to this part of ZassDelivery.
+            Your account doesn&apos;t have access to this part of ZassFood.
           </Body>
           <Button variant="outline" className="mt-2" onPress={() => router.replace(home)}>
             Go to your dashboard

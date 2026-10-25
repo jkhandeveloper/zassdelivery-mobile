@@ -74,7 +74,7 @@ function toApiError(error: unknown): ApiError {
         // MOBILE: a phone drops off the network constantly, so this copy is
         // read far more often here than on the web. It names the two things the
         // user can actually check.
-        message: "No connection to ZassDelivery. Check your mobile data or Wi-Fi.",
+        message: "No connection to ZassFood. Check your mobile data or Wi-Fi.",
         status: 0,
         code: "NETWORK_ERROR",
       });

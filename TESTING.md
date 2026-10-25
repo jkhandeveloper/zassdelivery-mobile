@@ -205,7 +205,7 @@ Settings. That is an OS rule, not a bug, and the rider screen says so.
 ### C6. A standalone APK for testers
 
 The development build needs Metro running on your PC. To hand someone an app that works on its
-own, build the **preview** variant — it installs as "ZassDeliver (Preview)" alongside the dev
+own, build the **preview** variant — it installs as "ZassFood (Preview)" alongside the dev
 build.
 
 A standalone build has no dev server to infer the API host from, so the API origin is
@@ -300,7 +300,7 @@ need no App Review; external testers do.
 
 | Symptom | Cause and fix |
 | --- | --- |
-| "No connection to ZassDelivery" | The API is unreachable from the device. Redo §A3 from the phone's browser. |
+| "No connection to ZassFood" | The API is unreachable from the device. Redo §A3 from the phone's browser. |
 | App loads, every request fails | API bound to `127.0.0.1`. See §A2. |
 | `adb devices` is empty | WSL not restarted after `.wslconfig` (§A1), or the phone is on a different Wi-Fi. |
 | Metro QR code will not connect | Phone and PC on different networks, or Windows Firewall is blocking port 8081. Try `npx expo start --tunnel`. |

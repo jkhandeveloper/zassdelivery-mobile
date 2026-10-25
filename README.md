@@ -1,4 +1,4 @@
-# ZassDeliver Mobile
+# ZassFood Mobile
 
 The Android and iOS app, built on Expo SDK 57 / React Native 0.86, talking to the
 same NestJS API as the web app at `/var/www/zassdeliver-frontend`.

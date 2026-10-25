@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-ZassDeliver mobile: an Expo SDK 57 / React Native app (Android + iOS) for the **Customer, Rider and Vendor** portals of a food-delivery platform. It talks to the same NestJS API (`/var/www/zassdelivery`) as the existing Next.js web app. Admin is deliberately web-only. `ROADMAP.md` holds the phased build plan and the decisions behind it. Check it before starting a feature. The screens under `src/app/(auth|customer|rider|vendor)` are mostly still empty route groups.
+ZassFood mobile: an Expo SDK 57 / React Native app (Android + iOS) for the **Customer, Rider and Vendor** portals of a food-delivery platform. It talks to the same NestJS API (`/var/www/zassdelivery`) as the existing Next.js web app. Admin is deliberately web-only. `ROADMAP.md` holds the phased build plan and the decisions behind it. Check it before starting a feature. The screens under `src/app/(auth|customer|rider|vendor)` are mostly still empty route groups.
 
 ## Commands
 

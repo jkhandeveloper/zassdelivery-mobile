@@ -29,9 +29,9 @@ const VARIANT = (process.env.EAS_BUILD_PROFILE ?? "development") as Variant;
  * real app on the device — and takes its data with it.
  */
 const IDENTIFIERS: Record<Variant, { id: string; name: string }> = {
-  development: { id: "com.zassdeliver.app.dev", name: "ZassDeliver (Dev)" },
-  preview: { id: "com.zassdeliver.app.preview", name: "ZassDeliver (Preview)" },
-  production: { id: "com.zassdeliver.app", name: "ZassDeliver" },
+  development: { id: "com.zassdeliver.app.dev", name: "ZassFood (Dev)" },
+  preview: { id: "com.zassdeliver.app.preview", name: "ZassFood (Preview)" },
+  production: { id: "com.zassdeliver.app", name: "ZassFood" },
 };
 
 const { id: bundleId, name: appName } = IDENTIFIERS[VARIANT];
@@ -189,9 +189,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       "expo-location",
       {
         locationAlwaysAndWhenInUsePermission:
-          "ZassDeliver shares your location with the customer while you are on a delivery.",
+          "ZassFood shares your location with the customer while you are on a delivery.",
         locationWhenInUsePermission:
-          "ZassDeliver uses your location to show businesses that deliver to you.",
+          "ZassFood uses your location to show businesses that deliver to you.",
         // Riders only. The customer and vendor apps never request this.
         isAndroidBackgroundLocationEnabled: true,
         isAndroidForegroundServiceEnabled: true,
@@ -200,14 +200,14 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     [
       "expo-camera",
       {
-        cameraPermission: "ZassDeliver uses the camera to scan payment QR codes.",
+        cameraPermission: "ZassFood uses the camera to scan payment QR codes.",
         recordAudioAndroid: false,
       },
     ],
     [
       "expo-image-picker",
       {
-        photosPermission: "ZassDeliver uses your photos for your profile picture and menu images.",
+        photosPermission: "ZassFood uses your photos for your profile picture and menu images.",
       },
     ],
     [

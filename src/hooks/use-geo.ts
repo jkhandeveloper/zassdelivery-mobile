@@ -73,7 +73,7 @@ export function useGeolocation(): GeolocationState & {
               ? "Location access was declined. Pick your area below instead."
               : // Once it can no longer be asked, the only route is Settings,
                 // so say that rather than inviting another futile tap.
-                "Location is blocked for ZassDeliver. Turn it on in Settings, or pick your area below.",
+                "Location is blocked for ZassFood. Turn it on in Settings, or pick your area below.",
           });
 
           return;

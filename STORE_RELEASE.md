@@ -1,4 +1,4 @@
-# Publishing ZassDeliver to Google Play and the App Store
+# Publishing ZassFood to Google Play and the App Store
 
 This guide takes the app from this repo to a live listing on both stores. It
 is written for this project specifically: Expo SDK 57, EAS Build and Submit,
@@ -149,7 +149,7 @@ Write down the credentials. You'll enter them in both consoles.
 
 1. Go to **App Store Connect** → *Apps* → **+** → *New App*.
    - Platform: iOS
-   - Name: `ZassDeliver` (must be unique on the store)
+   - Name: `ZassFood` (must be unique on the store)
    - Primary language: English
    - Bundle ID: `com.zassdeliver.app`. If it isn't in the list yet, EAS
      registers it on the first build (step 2.2), and you can come back here
@@ -242,12 +242,12 @@ Make sure that:
   vendor and rider logins in the Notes field.
 - **Notes**: something like the text below.
 
-> ZassDeliver is a food delivery marketplace with three roles: customer,
+> ZassFood is a food delivery marketplace with three roles: customer,
 > food business (vendor) and rider. Demo accounts for each are provided.
 > Customers pay the business directly (cash or bank/wallet transfer). No
 > payment is processed in the app. Background location is used only by riders
 > during an active delivery, so customers can track their order. Businesses
-> pay ZassDeliver a monthly business service fee by bank transfer outside the
+> pay ZassFood a monthly business service fee by bank transfer outside the
 > app. This is a B2B charge for listing on the platform and unlocks no
 > consumer digital content.
 
@@ -282,7 +282,7 @@ Register at **play.google.com/console**. Two things to know:
 
 ### 3.2 Create the app
 
-*All apps* → **Create app** → name `ZassDeliver`, default language English,
+*All apps* → **Create app** → name `ZassFood`, default language English,
 App, Free. Accept the declarations.
 
 ### 3.3 Google Maps key: restrict it to the Play signing key

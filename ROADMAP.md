@@ -1,4 +1,4 @@
-# ZassDeliver Mobile — build roadmap
+# ZassFood Mobile — build roadmap
 
 React Native (Expo SDK 57) app for Android + iOS, reaching the same NestJS API at
 `/var/www/zassdelivery` that the Next.js web app uses.

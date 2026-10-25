@@ -353,7 +353,7 @@ export default function LoginScreen() {
 
       <View className="flex-row items-center justify-center gap-1">
         <Body muted className="text-[14px]">
-          New to ZassDelivery?
+          New to ZassFood?
         </Body>
         <Link href="/register" asChild>
           <Pressable hitSlop={8} accessibilityRole="link">

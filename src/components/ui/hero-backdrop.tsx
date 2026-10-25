@@ -31,7 +31,7 @@ export function useLightStatusBar() {
  * sign-in screens, and the rider and vendor dashboards.
  *
  * A deep gradient with two soft glows — cyan for the brand, saffron for the
- * food — so the top of each portal is instantly recognisable as ZassDeliver
+ * food — so the top of each portal is instantly recognisable as ZassFood
  * rather than a stock white header. Drawn in SVG, not with an image or a
  * gradient library, so it scales to any height without a new native module.
  *

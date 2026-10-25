@@ -56,7 +56,7 @@ export function AuthShell({
         <View className="flex-row items-center justify-between">
           <View className="flex-row items-center gap-3">
             <BrandMark size={44} />
-            <Text className="font-display text-[20px] font-extrabold text-white">ZassDeliver</Text>
+            <Text className="font-display text-[20px] font-extrabold text-white">ZassFood</Text>
           </View>
 
           {/* The storefront is public, so signing in is always optional to leave. */}

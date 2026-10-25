@@ -703,7 +703,7 @@ function PaymentsSection({ restaurant }: { restaurant: RestaurantAdminDto }) {
     <Card className="gap-3">
       <Heading level={3}>Scan &amp; pay</Heading>
       <Body muted className="text-[13px]">
-        Customers scan these to pay you directly. ZassDelivery never holds your
+        Customers scan these to pay you directly. ZassFood never holds your
         money, so make sure the account details are yours and correct.
       </Body>
 

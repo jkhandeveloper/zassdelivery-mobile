@@ -246,7 +246,7 @@ export default function RegisterScreen() {
 
   return (
     <AuthShell
-      eyebrow="Join ZassDeliver"
+      eyebrow="Join ZassFood"
       title={"Order, ride\nor sell."}
       subtitle="One account, whichever side of the order you are on."
     >
