@@ -9,18 +9,24 @@ import { Field, Input } from "@/components/ui/input";
 import { Body } from "@/components/ui/primitives";
 import { LoadingState } from "@/components/ui/states";
 import { toast } from "@/components/ui/toast";
-import { useCreateMenuItem, useVendorMenus } from "@/hooks/use-vendor";
+import { useCreateMenuItem, useUpdateMenuItem, useVendorMenus } from "@/hooks/use-vendor";
 import { ApiError } from "@/lib/api-client";
 import { cn } from "@/lib/utils";
 import { SpiceLevel } from "@/types/enums";
+import type { MenuItemAdminDto } from "@/types/menu";
 
 /**
- * Adding a dish, including for a business that has no menu yet.
+ * Adding a dish, including for a business that has no menu yet — or, given
+ * `item`, editing one.
  *
  * A dish belongs to a section, so the section has to exist first — but making
  * a vendor build a menu tree before they can type in their first kebab is the
  * wrong order. Choosing "New section" here creates the menu and the section on
- * the way through; see `useCreateMenuItem`.
+ * the way through; see `useCreateMenuItem`. Editing only moves a dish between
+ * existing sections.
+ *
+ * The form's state is seeded from `item` once, on mount, so the caller mounts
+ * a fresh sheet (keyed by the dish) for each edit.
  *
  * The same fields as the web app's form, and deliberately no more: sizes and
  * add-on groups are still authored on the web, where there is room for them.
@@ -71,16 +77,21 @@ function Chip({
 
 export function AddDishSheet({
   restaurantId,
+  item,
   visible,
   onClose,
 }: {
   restaurantId: string;
+  item?: MenuItemAdminDto;
   visible: boolean;
   onClose: () => void;
 }) {
   const insets = useSafeAreaInsets();
   const menus = useVendorMenus(visible ? restaurantId : null);
   const create = useCreateMenuItem(restaurantId);
+  const update = useUpdateMenuItem();
+  const editing = item !== undefined;
+  const pending = create.isPending || update.isPending;
 
   const sections = React.useMemo(
     () =>
@@ -97,21 +108,29 @@ export function AddDishSheet({
     [menus.data],
   );
 
-  const [chosenSection, setChosenSection] = React.useState<string | null>(null);
+  const [chosenSection, setChosenSection] = React.useState<string | null>(
+    item?.menuCategoryId ?? null,
+  );
   const [newSection, setNewSection] = React.useState("");
-  const [name, setName] = React.useState("");
-  const [description, setDescription] = React.useState("");
-  const [imageUrl, setImageUrl] = React.useState<string | null>(null);
-  const [basePrice, setBasePrice] = React.useState("");
-  const [discountedPrice, setDiscountedPrice] = React.useState("");
-  const [prepMinutes, setPrepMinutes] = React.useState("");
-  const [spiceLevel, setSpiceLevel] = React.useState<SpiceLevel>(SpiceLevel.NONE);
-  const [isVegetarian, setIsVegetarian] = React.useState(false);
+  const [name, setName] = React.useState(item?.name ?? "");
+  const [description, setDescription] = React.useState(item?.description ?? "");
+  const [imageUrl, setImageUrl] = React.useState<string | null>(item?.imageUrl ?? null);
+  const [basePrice, setBasePrice] = React.useState(item ? String(item.basePrice) : "");
+  const [discountedPrice, setDiscountedPrice] = React.useState(
+    item?.discountedPrice != null ? String(item.discountedPrice) : "",
+  );
+  const [prepMinutes, setPrepMinutes] = React.useState(
+    item ? String(item.preparationMinutes) : "",
+  );
+  const [spiceLevel, setSpiceLevel] = React.useState<SpiceLevel>(
+    item?.spiceLevel ?? SpiceLevel.NONE,
+  );
+  const [isVegetarian, setIsVegetarian] = React.useState(item?.isVegetarian ?? false);
 
   // Falls back to the first section once the menu tree arrives, without
   // overwriting a choice already made — and to "new section" when there are none.
   const section = chosenSection ?? sections[0]?.id ?? NEW_SECTION;
-  const creatingSection = section === NEW_SECTION;
+  const creatingSection = !editing && section === NEW_SECTION;
 
   const price = Number(basePrice);
   const discount = discountedPrice.trim() === "" ? null : Number(discountedPrice);
@@ -151,8 +170,40 @@ export function AddDishSheet({
     setIsVegetarian(false);
   };
 
+  const fail = (error: unknown, fallback: string) =>
+    toast.error(
+      error instanceof ApiError ? error.message : error instanceof Error ? error.message : fallback,
+    );
+
   const onSubmit = () => {
     if (!canSubmit) {
+      return;
+    }
+
+    if (editing) {
+      update.mutate(
+        {
+          itemId: item.id,
+          data: {
+            name: name.trim(),
+            basePrice: price,
+            discountedPrice: discount,
+            spiceLevel,
+            isVegetarian,
+            description: description.trim() === "" ? null : description.trim(),
+            imageUrl,
+            ...(prepMinutes.trim() !== "" && { preparationMinutes: Number(prepMinutes) }),
+            ...(section !== item.menuCategoryId && { menuCategoryId: section }),
+          },
+        },
+        {
+          onSuccess: (dish) => {
+            toast.success(`${dish.name} updated`);
+            onClose();
+          },
+          onError: (error) => fail(error, "We couldn't save that dish."),
+        },
+      );
       return;
     }
 
@@ -177,14 +228,7 @@ export function AddDishSheet({
           reset();
           onClose();
         },
-        onError: (error) =>
-          toast.error(
-            error instanceof ApiError
-              ? error.message
-              : error instanceof Error
-                ? error.message
-                : "We couldn't add that dish.",
-          ),
+        onError: (error) => fail(error, "We couldn't add that dish."),
       },
     );
   };
@@ -199,7 +243,7 @@ export function AddDishSheet({
       <View className="flex-1 bg-canvas" style={{ paddingTop: insets.top }}>
         <View className="flex-row items-center justify-between px-2 py-2">
           <Text className="flex-1 px-2 font-display text-[19px] font-bold text-primary">
-            Add a dish
+            {editing ? `Edit ${item.name}` : "Add a dish"}
           </Text>
           <Pressable
             accessibilityRole="button"
@@ -214,7 +258,9 @@ export function AddDishSheet({
 
         <ScrollView contentContainerClassName="gap-4 px-4 pb-6" keyboardShouldPersistTaps="handled">
           <Body muted className="text-[13px]">
-            It goes on your menu as soon as it&apos;s saved — mark it sold out any time.
+            {editing
+              ? "Changes show on your storefront as soon as they're saved."
+              : "It goes on your menu as soon as it's saved — mark it sold out any time."}
           </Body>
 
           {menus.isPending ? (
@@ -239,11 +285,13 @@ export function AddDishSheet({
                       onPress={() => setChosenSection(option.id)}
                     />
                   ))}
-                  <Chip
-                    label="+ New section"
-                    active={creatingSection}
-                    onPress={() => setChosenSection(NEW_SECTION)}
-                  />
+                  {!editing ? (
+                    <Chip
+                      label="+ New section"
+                      active={creatingSection}
+                      onPress={() => setChosenSection(NEW_SECTION)}
+                    />
+                  ) : null}
                 </View>
               </Field>
 
@@ -364,10 +412,10 @@ export function AddDishSheet({
             fullWidth
             size="lg"
             onPress={onSubmit}
-            loading={create.isPending}
+            loading={pending}
             disabled={!canSubmit}
           >
-            Add to menu
+            {editing ? "Save changes" : "Add to menu"}
           </Button>
         </View>
       </View>

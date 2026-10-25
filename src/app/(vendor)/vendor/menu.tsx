@@ -1,6 +1,6 @@
-import { Minus, Plus, Search, X } from "lucide-react-native";
+import { Minus, Pencil, Plus, Search, Trash2, X } from "lucide-react-native";
 import * as React from "react";
-import { FlatList, Pressable, Switch, Text, View } from "react-native";
+import { Alert, FlatList, Pressable, Switch, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AddDishSheet } from "@/components/shared/add-dish-sheet";
@@ -10,7 +10,12 @@ import { Input, InputAction } from "@/components/ui/input";
 import { Badge, Card, Heading } from "@/components/ui/primitives";
 import { EmptyState, ErrorState, LoadingState } from "@/components/ui/states";
 import { toast } from "@/components/ui/toast";
-import { useAdjustStock, useUpdateMenuItem, useVendorMenuItems } from "@/hooks/use-vendor";
+import {
+  useAdjustStock,
+  useDeleteMenuItem,
+  useUpdateMenuItem,
+  useVendorMenuItems,
+} from "@/hooks/use-vendor";
 import { ApiError } from "@/lib/api-client";
 import { cn, formatPrice, hasText } from "@/lib/utils";
 import { MenuItemStatus } from "@/types/enums";
@@ -33,16 +38,18 @@ import type { RestaurantAdminDto } from "@/types/restaurant";
  *
  * Adding a dish is here too, behind one button, because a vendor whose only
  * device is this phone has no other way to get a menu at all. Sizes and add-on
- * groups are the part that stays on the web — see `AddDishSheet`.
+ * groups are the part that stays on the web — see `AddDishSheet`. So are
+ * editing a dish's details and deleting it, as small icons beside the switch.
  */
 
 type StatusFilter = "all" | "available" | "unavailable";
 
-function DishRow({ item }: { item: MenuItemAdminDto }) {
+function DishRow({ item, onEdit }: { item: MenuItemAdminDto; onEdit: () => void }) {
   const updateItem = useUpdateMenuItem();
   const adjustStock = useAdjustStock();
+  const deleteItem = useDeleteMenuItem();
 
-  const busy = updateItem.isPending || adjustStock.isPending;
+  const busy = updateItem.isPending || adjustStock.isPending || deleteItem.isPending;
 
   const onError = React.useCallback((error: unknown) => {
     toast.error(error instanceof ApiError ? error.message : "Couldn't save that.");
@@ -83,6 +90,25 @@ function DishRow({ item }: { item: MenuItemAdminDto }) {
     );
   };
 
+  const confirmDelete = () => {
+    Alert.alert(
+      `Delete ${item.name}?`,
+      "It disappears from your storefront and this list. Past orders that included it are kept. To take it off sale for a while, use the switch instead.",
+      [
+        { text: "Keep it", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () =>
+            deleteItem.mutate(item.id, {
+              onSuccess: () => toast.success(`${item.name} deleted`),
+              onError,
+            }),
+        },
+      ],
+    );
+  };
+
   return (
     <Card className="gap-2">
       <View className="flex-row items-start justify-between gap-3">
@@ -101,7 +127,7 @@ function DishRow({ item }: { item: MenuItemAdminDto }) {
             >
               {formatPrice(item.effectivePrice)}
             </Text>
-            {item.discountedPrice !== null ? (
+            {item.discountedPrice !== null && item.discountedPrice < item.basePrice ? (
               <Text
                 className="font-sans text-[12px] text-muted line-through"
                 style={{ fontVariant: ["tabular-nums"] }}
@@ -125,6 +151,28 @@ function DishRow({ item }: { item: MenuItemAdminDto }) {
             trackColor={{ false: "#CFDFE9", true: "#22D3EE" }}
             thumbColor="#FFFFFF"
           />
+          <View className="flex-row items-center">
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={`Edit ${item.name}`}
+              onPress={onEdit}
+              disabled={busy}
+              hitSlop={4}
+              className="h-9 w-9 items-center justify-center"
+            >
+              <Pencil size={17} color="#75909F" />
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={`Delete ${item.name}`}
+              onPress={confirmDelete}
+              disabled={busy}
+              hitSlop={4}
+              className="h-9 w-9 items-center justify-center"
+            >
+              <Trash2 size={17} color="#DC2626" />
+            </Pressable>
+          </View>
         </View>
       </View>
 
@@ -202,6 +250,7 @@ function VendorMenu({ restaurant }: { restaurant: RestaurantAdminDto }) {
   const [search, setSearch] = React.useState("");
   const [filter, setFilter] = React.useState<StatusFilter>("all");
   const [adding, setAdding] = React.useState(false);
+  const [editing, setEditing] = React.useState<MenuItemAdminDto | null>(null);
 
   // Debounced, so typing a dish name is one request rather than several.
   React.useEffect(() => {
@@ -315,7 +364,7 @@ function VendorMenu({ restaurant }: { restaurant: RestaurantAdminDto }) {
           contentContainerClassName="gap-3 px-4 pb-8"
           refreshing={items.isRefetching}
           onRefresh={() => void items.refetch()}
-          renderItem={({ item }) => <DishRow item={item} />}
+          renderItem={({ item }) => <DishRow item={item} onEdit={() => setEditing(item)} />}
           ListEmptyComponent={
             <EmptyState
               title={search !== "" ? "No dishes matched" : "No dishes yet"}
@@ -339,6 +388,16 @@ function VendorMenu({ restaurant }: { restaurant: RestaurantAdminDto }) {
         visible={adding}
         onClose={() => setAdding(false)}
       />
+
+      {editing !== null ? (
+        <AddDishSheet
+          key={editing.id}
+          restaurantId={restaurant.id}
+          item={editing}
+          visible
+          onClose={() => setEditing(null)}
+        />
+      ) : null}
     </View>
   );
 }

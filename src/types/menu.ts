@@ -163,12 +163,17 @@ export interface CreateMenuItemDto {
 }
 
 export interface UpdateMenuItemDto {
+  /** Moves the dish to another section of the same business. */
+  menuCategoryId?: string
   name?: string
   nameUr?: string
-  description?: string
-  imageUrl?: string
+  /** null clears it. */
+  description?: string | null
+  /** null clears it. */
+  imageUrl?: string | null
   basePrice?: number
-  discountedPrice?: number
+  /** null removes the offer. */
+  discountedPrice?: number | null
   status?: MenuItemStatus
   isVegetarian?: boolean
   spiceLevel?: SpiceLevel

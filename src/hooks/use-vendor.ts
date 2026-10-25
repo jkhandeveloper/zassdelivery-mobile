@@ -335,6 +335,17 @@ export function useUpdateMenuItem() {
   });
 }
 
+export function useDeleteMenuItem() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (itemId: string) => menuApi.deleteMenuItem(itemId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: [...vendorKeys.all, "items"] });
+    },
+  });
+}
+
 export function useAdjustStock() {
   const queryClient = useQueryClient();
 
