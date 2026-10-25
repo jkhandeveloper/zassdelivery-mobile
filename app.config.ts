@@ -95,7 +95,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     package: bundleId,
     ...(GOOGLE_SERVICES_FILE !== undefined && { googleServicesFile: GOOGLE_SERVICES_FILE }),
     adaptiveIcon: {
-      backgroundColor: "#0A1622",
+      // Just under the logo's own dark disc, so the disc reads as the icon.
+      backgroundColor: "#0B0D12",
       foregroundImage: "./assets/images/android-icon-foreground.png",
       monochromeImage: "./assets/images/android-icon-monochrome.png",
     },
@@ -181,7 +182,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       {
         backgroundColor: "#0A1622",
         image: "./assets/images/splash-icon.png",
-        imageWidth: 180,
+        imageWidth: 220,
       },
     ],
     [

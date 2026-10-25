@@ -1,3 +1,4 @@
+import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import { X } from "lucide-react-native";
 import * as React from "react";
@@ -12,32 +13,19 @@ import { Screen } from "@/components/ui/primitives";
  * raised sheet that overlaps it.
  *
  * These are the first screens a new user sees, so they carry the identity —
- * the navy ground and the Z mark — rather than being a plain white form.
+ * the navy ground and the logo — rather than being a plain white form.
  */
+
+// Metro resolves images through `require`; there is no static import for them.
+const LOGO = require("@/assets/images/logo.png") as number;
 export function BrandMark({ size = 56 }: { size?: number }) {
   return (
-    <View
-      collapsable={false}
-      className="items-center justify-center"
-      style={{
-        width: size,
-        height: size,
-        borderRadius: size * 0.32,
-        backgroundColor: "#22D3EE",
-        transform: [{ rotate: "-6deg" }],
-      }}
-    >
-      <Text
-        className="font-display font-extrabold"
-        style={{
-          fontSize: size * 0.56,
-          color: "#04202B",
-          transform: [{ rotate: "6deg" }],
-        }}
-      >
-        Z
-      </Text>
-    </View>
+    <Image
+      source={LOGO}
+      style={{ width: size, height: size }}
+      contentFit="contain"
+      accessibilityIgnoresInvertColors
+    />
   );
 }
 
